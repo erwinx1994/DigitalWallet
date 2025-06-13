@@ -4,7 +4,8 @@
 This repository provides multiple applications that work together to function as a backend for a digital wallet service. The purpose of each application is described below.
 
     api_gateway
-    Route incoming HTTP requests from the user to the correct backend service. Return the result after processing to the user.
+    Route incoming HTTP requests from the user to the correct backend service. 
+    Return the result after processing to the user.
 
     deposit_service
     Deposit money into wallet
