@@ -2,24 +2,11 @@ package main
 
 import (
 	"api_gateway/config"
-	"context"
-	"errors"
 	"log"
-	"net"
-	"net/http"
 	"os"
 	"os/signal"
-	"sync"
-	"sync/atomic"
 	"syscall"
-	"time"
 )
-
-type HTTPRequestMultiplexer struct{}
-
-func (mux *HTTPRequestMultiplexer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	log.Print("HTTP Request received.")
-}
 
 func main() {
 
@@ -37,57 +24,12 @@ func main() {
 	}
 	log.Println("Successfully loaded configuration file at ", config_file_path)
 
-	var is_alive atomic.Bool
-	is_alive.Store(true)
-
-	var waitgroup sync.WaitGroup
-	waitgroup.Add(1)
-
-	var http_server *http.Server
-
-	go func() {
-
-		defer func() {
-			waitgroup.Done()
-			log.Println("Shutdown HTTP server.")
-		}()
-
-		// Server continues running until terminated by user
-		for is_alive.Load() {
-
-			log.Println("Starting up HTTP server.")
-
-			// Create a listener
-			listener, err := net.Listen("tcp", ":"+config.ListenPort)
-			if err != nil {
-				log.Print("Unable to listen on port: ", config.ListenPort)
-				log.Print("Reestablishing in ", config.RetryInterval, " s.")
-				time.Sleep(time.Duration(config.RetryInterval) * time.Second)
-				continue
-			}
-			log.Println("Listening on port: ", config.ListenPort)
-
-			// Create a HTTP request multiplexer
-			mux := HTTPRequestMultiplexer{}
-
-			http_server = &http.Server{
-				Addr:                         ":" + config.ListenPort,
-				Handler:                      &mux,
-				DisableGeneralOptionsHandler: false,
-				ReadTimeout:                  time.Duration(config.ReadTimeout),
-				WriteTimeout:                 time.Duration(config.WriteTimeout),
-				IdleTimeout:                  time.Duration(config.IdleTimeout),
-			}
-			err = http_server.Serve(listener)
-			if err != nil && !errors.Is(err, http.ErrServerClosed) {
-				log.Print("Error with HTTP server: ", err.Error())
-				log.Print("Reestablishing in ", config.RetryInterval, " s.")
-				time.Sleep(time.Duration(config.RetryInterval) * time.Second)
-				continue
-			}
-		}
-
-	}()
+	// Start running API gateway
+	api_gateway := &APIGateway{
+		config:      config,
+		http_server: nil,
+	}
+	api_gateway.run()
 
 	// Listen for abort signal to terminate the api_gateway
 	// Pressing CTRL + C while the application is running
@@ -96,15 +38,5 @@ func main() {
 	<-abort_channel
 
 	// Shutdown the HTTP server gracefully
-	is_alive.Store(false)
-	if http_server != nil {
-		// No need to handle error returned by Server.Shutdown.
-		// The signal to abort is already sent. Just terminate the application
-		// regardless of whether an error occurs during shutdown.
-		context_ := context.Background()
-		context_with_timeout, cancel := context.WithTimeout(context_, time.Duration(5)*time.Second)
-		defer cancel()
-		http_server.Shutdown(context_with_timeout)
-	}
-	waitgroup.Wait()
+	api_gateway.shutdown()
 }
