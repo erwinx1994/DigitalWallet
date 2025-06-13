@@ -1,0 +1,6 @@
+listen_port: 1120
+read_timeout: 5 # s
+write_timeout: 5 # s
+idle_timeout: 5 # s
+retry_interval: 5 # s
+shutdown_timeout: 5 # s
