@@ -29,31 +29,31 @@ The system design diagram that connects them all can be found in the [./system_d
     Deposit money into wallet
     POST /wallets/{wallet_id}/deposits
     {
-    "amount": 5000,
-    "currency": "XXX"
+        "amount": 5000,
+        "currency": "XXX"
     }
 
     Withdraw money from a wallet
     POST /wallets/{wallet_id}/withdrawals
     {
-    "amount": 5000,
-    "currency": "XXX"
+        "amount": 5000,
+        "currency": "XXX"
     }
 
     Transfer money from one wallet to another
     POST /transfer
     {
-    "source_wallet_id": "id1",
-    "destination_wallet_id": "id2",
-    "amount": 5000,
-    "currency": "XXX"
+        "source_wallet_id": "id1",
+        "destination_wallet_id": "id2",
+        "amount": 5000,
+        "currency": "XXX"
     }
 
     Retrieve balance of a wallet
     GET /wallets/{wallet_id}/balance
 
     Retrieve transaction history of a wallet
-    GET /wallets/{wallet_id}/transaction_history
+    GET /wallets/{wallet_id}/transaction_history?from=YYYYMMDD&to=YYYYMMDD
 
 ## Set up of databases 
 
