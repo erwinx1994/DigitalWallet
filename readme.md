@@ -125,6 +125,10 @@ The names of all message queues used by the backend applications are summarised 
     transaction_history_requests_queue
     transaction_history_responses_queue
 
+## Library dependencies
+
+    go get github.com/redis/go-redis/v9
+
 ## How to compile the code
 
 The go compiler is required to compile the programs in this repository it can be downloaded from [https://go.dev/dl/](https://go.dev/dl/). 

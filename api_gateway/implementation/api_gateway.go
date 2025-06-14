@@ -10,14 +10,30 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type APIGateway struct {
+
+	// API gateway settings
 	config           *config.Config
 	is_alive         atomic.Bool
 	http_server      *http.Server
 	http_multiplexer HTTPRequestMultiplexer
 	waitgroup        sync.WaitGroup
+
+	// Resource handles to request and response queues
+	deposit_requests_queue              *redis.Client
+	deposit_responses_queue             *redis.Client
+	withdrawal_requests_queue           *redis.Client
+	withdrawal_responses_queue          *redis.Client
+	transfer_requests_queue             *redis.Client
+	transfer_responses_queue            *redis.Client
+	balance_requests_queue              *redis.Client
+	balance_responses_queue             *redis.Client
+	transaction_history_requests_queue  *redis.Client
+	transaction_history_responses_queue *redis.Client
 }
 
 func CreateAPIGateway(config *config.Config) *APIGateway {
@@ -28,6 +44,143 @@ func CreateAPIGateway(config *config.Config) *APIGateway {
 	return api_gateway
 }
 
+func (api_gateway *APIGateway) prepare_redis_clients() error {
+
+	background_context := context.Background()
+
+	{
+		// Prepare deposit requests queue
+		api_gateway.deposit_requests_queue = redis.NewClient(api_gateway.config.DepositsService.RequestsQueue.GetRedisOptions())
+
+		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.DepositsService.RequestsQueue.Timeout)*time.Second)
+		_, err := api_gateway.deposit_requests_queue.Ping(timeout_context).Result()
+		if err != nil {
+			cancel()
+			return err
+		}
+		cancel()
+	}
+
+	{
+		// Prepare deposit responses queue
+		api_gateway.deposit_responses_queue = redis.NewClient(api_gateway.config.DepositsService.ResponsesQueue.GetRedisOptions())
+
+		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.DepositsService.ResponsesQueue.Timeout)*time.Second)
+		_, err := api_gateway.deposit_responses_queue.Ping(timeout_context).Result()
+		if err != nil {
+			cancel()
+			return err
+		}
+		cancel()
+	}
+
+	{
+		// Prepare withdrawal requests queue
+		api_gateway.withdrawal_requests_queue = redis.NewClient(api_gateway.config.WithdrawalService.RequestsQueue.GetRedisOptions())
+
+		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.WithdrawalService.RequestsQueue.Timeout)*time.Second)
+		_, err := api_gateway.withdrawal_requests_queue.Ping(timeout_context).Result()
+		if err != nil {
+			cancel()
+			return err
+		}
+		cancel()
+	}
+
+	{
+		// Prepare withdrawal responses queue
+		api_gateway.withdrawal_responses_queue = redis.NewClient(api_gateway.config.WithdrawalService.ResponsesQueue.GetRedisOptions())
+
+		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.WithdrawalService.ResponsesQueue.Timeout)*time.Second)
+		_, err := api_gateway.withdrawal_responses_queue.Ping(timeout_context).Result()
+		if err != nil {
+			cancel()
+			return err
+		}
+		cancel()
+	}
+
+	{
+		// Prepare transfer requests queue
+		api_gateway.transfer_requests_queue = redis.NewClient(api_gateway.config.TransferService.RequestsQueue.GetRedisOptions())
+
+		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.TransferService.RequestsQueue.Timeout)*time.Second)
+		_, err := api_gateway.transfer_requests_queue.Ping(timeout_context).Result()
+		if err != nil {
+			cancel()
+			return err
+		}
+		cancel()
+	}
+
+	{
+		// Prepare transfer responses queue
+		api_gateway.transfer_responses_queue = redis.NewClient(api_gateway.config.TransferService.ResponsesQueue.GetRedisOptions())
+
+		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.TransferService.ResponsesQueue.Timeout)*time.Second)
+		_, err := api_gateway.transfer_responses_queue.Ping(timeout_context).Result()
+		if err != nil {
+			cancel()
+			return err
+		}
+		cancel()
+	}
+
+	{
+		// Prepare balance requests queue
+		api_gateway.balance_requests_queue = redis.NewClient(api_gateway.config.BalanceService.RequestsQueue.GetRedisOptions())
+
+		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.BalanceService.RequestsQueue.Timeout)*time.Second)
+		_, err := api_gateway.balance_requests_queue.Ping(timeout_context).Result()
+		if err != nil {
+			cancel()
+			return err
+		}
+		cancel()
+	}
+
+	{
+		// Prepare balance responses queue
+		api_gateway.balance_responses_queue = redis.NewClient(api_gateway.config.BalanceService.ResponsesQueue.GetRedisOptions())
+
+		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.BalanceService.ResponsesQueue.Timeout)*time.Second)
+		_, err := api_gateway.balance_responses_queue.Ping(timeout_context).Result()
+		if err != nil {
+			cancel()
+			return err
+		}
+		cancel()
+	}
+
+	{
+		// Prepare transaction history requests queue
+		api_gateway.transaction_history_requests_queue = redis.NewClient(api_gateway.config.TransactionHistoryService.RequestsQueue.GetRedisOptions())
+
+		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.TransactionHistoryService.RequestsQueue.Timeout)*time.Second)
+		_, err := api_gateway.transaction_history_requests_queue.Ping(timeout_context).Result()
+		if err != nil {
+			cancel()
+			return err
+		}
+		cancel()
+	}
+
+	{
+		// Prepare transaction history responses queue
+		api_gateway.transaction_history_responses_queue = redis.NewClient(api_gateway.config.TransactionHistoryService.ResponsesQueue.GetRedisOptions())
+
+		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.TransactionHistoryService.ResponsesQueue.Timeout)*time.Second)
+		_, err := api_gateway.transaction_history_responses_queue.Ping(timeout_context).Result()
+		if err != nil {
+			cancel()
+			return err
+		}
+		cancel()
+	}
+
+	return nil
+}
+
 func (api_gateway *APIGateway) async_http_server() {
 	defer func() {
 		api_gateway.waitgroup.Done()
@@ -35,6 +188,11 @@ func (api_gateway *APIGateway) async_http_server() {
 	}()
 
 	config := api_gateway.config
+
+	err := api_gateway.prepare_redis_clients()
+	if err != nil {
+		log.Fatal("Could not connect to Redis server: ", err)
+	}
 
 	// Server continues running until terminated by user
 	for api_gateway.is_alive.Load() {

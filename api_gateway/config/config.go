@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 
+	"github.com/redis/go-redis/v9"
 	"gopkg.in/yaml.v3"
 )
 
@@ -21,11 +22,12 @@ type RedisMessageQueue struct {
 	Username  string `yaml:"username"`
 	Password  string `yaml:"password"`
 	QueueName string `yaml:"queue_name"`
+	Timeout   int    `yaml:"timeout"`
 }
 
 type Service struct {
-	RequestsQueue RedisMessageQueue `yaml:"redis_requests_queue"`
-	ResponseQueue RedisMessageQueue `yaml:"redis_response_queue"`
+	RequestsQueue  RedisMessageQueue `yaml:"redis_requests_queue"`
+	ResponsesQueue RedisMessageQueue `yaml:"redis_response_queue"`
 }
 
 type Config struct {
@@ -52,4 +54,13 @@ func Load(filepath string) (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+func (message_queue *RedisMessageQueue) GetRedisOptions() *redis.Options {
+	options := &redis.Options{
+		Addr:     message_queue.Host + ":" + message_queue.Port,
+		Username: message_queue.Username,
+		Password: message_queue.Password,
+	}
+	return options
 }
