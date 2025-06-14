@@ -1,4 +1,4 @@
-package main
+package implementation
 
 import (
 	"api_gateway/config"
@@ -233,14 +233,14 @@ func (api_gateway *APIGateway) async_read_responses() {
 	}
 }
 
-func (api_gateway *APIGateway) run() {
+func (api_gateway *APIGateway) Run() {
 	api_gateway.is_alive.Store(true)
 	api_gateway.waitgroup.Add(2)
 	go api_gateway.async_http_server()
 	go api_gateway.async_read_responses()
 }
 
-func (api_gateway *APIGateway) shutdown() {
+func (api_gateway *APIGateway) Shutdown() {
 	api_gateway.is_alive.Store(false)
 	if api_gateway.http_server != nil {
 		// No need to handle error returned by Server.Shutdown.

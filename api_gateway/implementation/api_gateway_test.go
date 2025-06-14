@@ -1,4 +1,4 @@
-package main
+package implementation
 
 import (
 	"api_gateway/config"
@@ -13,7 +13,7 @@ import (
 
 func Test_APIGateway(t *testing.T) {
 
-	config, err := config.Load("./config.yml")
+	config, err := config.Load("../config.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,8 +23,8 @@ func Test_APIGateway(t *testing.T) {
 		config:      config,
 		http_server: nil,
 	}
-	api_gateway.run()
-	defer api_gateway.shutdown()
+	api_gateway.Run()
+	defer api_gateway.Shutdown()
 
 	time.Sleep(2 * time.Second)
 

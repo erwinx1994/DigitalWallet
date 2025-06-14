@@ -2,6 +2,7 @@ package main
 
 import (
 	"api_gateway/config"
+	"api_gateway/implementation"
 	"log"
 	"os"
 	"os/signal"
@@ -25,8 +26,8 @@ func main() {
 	log.Println("Successfully loaded configuration file at ", config_file_path)
 
 	// Start running API gateway
-	api_gateway := CreateAPIGateway(config)
-	api_gateway.run()
+	api_gateway := implementation.CreateAPIGateway(config)
+	api_gateway.Run()
 
 	// Listen for abort signal to terminate the api_gateway
 	// Pressing CTRL + C while the application is running
@@ -35,5 +36,5 @@ func main() {
 	<-abort_channel
 
 	// Shutdown the HTTP server gracefully
-	api_gateway.shutdown()
+	api_gateway.Shutdown()
 }
