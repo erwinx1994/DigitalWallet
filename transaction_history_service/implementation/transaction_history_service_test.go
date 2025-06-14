@@ -2,6 +2,6 @@ package implementation
 
 import "testing"
 
-func Test_DepositService(t *testing.T) {
+func Test_TransactionHistoryService(t *testing.T) {
 
 }
