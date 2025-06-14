@@ -19,7 +19,7 @@ const (
 // Key value pairs are specified in the query string section of a URL
 type MatchResult struct {
 	MatchFound       bool
-	WildcardSegments map[string]interface{}
+	WildcardSegments map[string]string
 	KeyValuePairs    map[string]string
 }
 
@@ -42,13 +42,14 @@ func MatchAndExtract(path, pattern string) *MatchResult {
 
 	result := MatchResult{
 		MatchFound:       true,
-		WildcardSegments: make(map[string]interface{}, maximum_number_of_wildcard_segments),
+		WildcardSegments: make(map[string]string, maximum_number_of_wildcard_segments),
 		KeyValuePairs:    make(map[string]string, maximum_number_of_keyvalue_pairs),
 	}
 
 	path_index := 0
 	pattern_index := 0
 	wildcard_segment := ""
+	wildcard_segment_name := ""
 
 	for path_index < len(path) && pattern_index < len(pattern) {
 
@@ -71,9 +72,15 @@ func MatchAndExtract(path, pattern string) *MatchResult {
 				path_index++
 			}
 
+			for pattern_index < len(pattern) && pattern[pattern_index] != '}' {
+				wildcard_segment_name += string(pattern[pattern_index])
+				pattern_index++
+			}
+
 			if path_index < len(path) && path[path_index] == '}' {
-				result.WildcardSegments[wildcard_segment] = struct{}{}
+				result.WildcardSegments[wildcard_segment_name] = wildcard_segment
 				wildcard_segment = ""
+				wildcard_segment_name = ""
 			} else {
 				// Invalid match found
 				result.MatchFound = false
@@ -82,9 +89,6 @@ func MatchAndExtract(path, pattern string) *MatchResult {
 				return &result
 			}
 
-			for pattern_index < len(pattern) && pattern[pattern_index] != '}' {
-				pattern_index++
-			}
 		}
 
 		path_index++

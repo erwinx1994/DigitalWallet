@@ -13,10 +13,10 @@ func Test_MatchAndExtract(t *testing.T) {
 		result := MatchAndExtract(path, Wallets_transaction_history)
 		expected_result := &MatchResult{
 			MatchFound:       true,
-			WildcardSegments: make(map[string]interface{}, maximum_number_of_wildcard_segments),
+			WildcardSegments: make(map[string]string, maximum_number_of_wildcard_segments),
 			KeyValuePairs:    make(map[string]string, maximum_number_of_keyvalue_pairs),
 		}
-		expected_result.WildcardSegments["wallet_id"] = struct{}{}
+		expected_result.WildcardSegments["wallet_id"] = "wallet_id"
 		if !reflect.DeepEqual(*result, *expected_result) {
 			t.Error("Expected: ", *expected_result, ", Got: ", result)
 		}
@@ -26,10 +26,10 @@ func Test_MatchAndExtract(t *testing.T) {
 		result := MatchAndExtract(path, Wallets_transaction_history)
 		expected_result := &MatchResult{
 			MatchFound:       true,
-			WildcardSegments: make(map[string]interface{}, maximum_number_of_wildcard_segments),
+			WildcardSegments: make(map[string]string, maximum_number_of_wildcard_segments),
 			KeyValuePairs:    make(map[string]string, maximum_number_of_keyvalue_pairs),
 		}
-		expected_result.WildcardSegments["wallet_id"] = struct{}{}
+		expected_result.WildcardSegments["wallet_id"] = "wallet_id"
 		expected_result.KeyValuePairs["key1"] = "value1"
 		expected_result.KeyValuePairs["key2"] = "value2"
 		if !reflect.DeepEqual(*result, *expected_result) {
@@ -41,10 +41,10 @@ func Test_MatchAndExtract(t *testing.T) {
 		result := MatchAndExtract(path, Wallets_transaction_history)
 		expected_result := &MatchResult{
 			MatchFound:       true,
-			WildcardSegments: make(map[string]interface{}, maximum_number_of_wildcard_segments),
+			WildcardSegments: make(map[string]string, maximum_number_of_wildcard_segments),
 			KeyValuePairs:    make(map[string]string, maximum_number_of_keyvalue_pairs),
 		}
-		expected_result.WildcardSegments["wallet_id"] = struct{}{}
+		expected_result.WildcardSegments["wallet_id"] = "wallet_id"
 		expected_result.KeyValuePairs["key1"] = ""
 		expected_result.KeyValuePairs["key2"] = ""
 		if !reflect.DeepEqual(*result, *expected_result) {

@@ -3,8 +3,11 @@ package implementation
 import (
 	"api_gateway/paths"
 	"encoding/json"
+	"errors"
+	"io"
 	"log"
 	"net/http"
+	"shared/messages"
 	"sync"
 
 	"github.com/redis/go-redis/v9"
@@ -33,17 +36,90 @@ type HTTPRequestMultiplexer struct {
 
 func (mux *HTTPRequestMultiplexer) POST_Deposit(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
 
-	// Verify that the input is correct
+	// Extract body of message
+	if request.ContentLength <= 0 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	bytes := make([]byte, request.ContentLength)
+	_, err := request.Body.Read(bytes)
+	if err != nil && !errors.Is(err, io.EOF) {
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	body := messages.POST_Deposit{}
+	err = json.Unmarshal(bytes, &body)
+	if err != nil {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Verify that input is correct. Basic checks only due to time limit.
+	wallet_id, exist := input.WildcardSegments["wallet_id"]
+	if !exist {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if len(wallet_id) == 0 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if len(body.Amount) == 0 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if len(body.Currency) == 0 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	// Put request in queue
 
 	// Wait for response to request
 
 	// Send response to user
+	writer.Write(bytes)
 
 }
 
 func (mux *HTTPRequestMultiplexer) POST_Withdrawal(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
+
+	// Extract body of message
+	if request.ContentLength <= 0 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	bytes := make([]byte, request.ContentLength)
+	_, err := request.Body.Read(bytes)
+	if err != nil && !errors.Is(err, io.EOF) {
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	body := messages.POST_Withdraw{}
+	err = json.Unmarshal(bytes, &body)
+	if err != nil {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Verify that input is correct
+	wallet_id, exist := input.WildcardSegments["wallet_id"]
+	if !exist {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if len(wallet_id) == 0 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if len(body.Amount) == 0 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if len(body.Currency) == 0 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	// Put request in queue
 
@@ -55,6 +131,42 @@ func (mux *HTTPRequestMultiplexer) POST_Withdrawal(input *paths.MatchResult, wri
 
 func (mux *HTTPRequestMultiplexer) POST_Transfer(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
 
+	// Extract body of message
+	if request.ContentLength <= 0 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	bytes := make([]byte, request.ContentLength)
+	_, err := request.Body.Read(bytes)
+	if err != nil && !errors.Is(err, io.EOF) {
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	body := messages.POST_Transfer{}
+	err = json.Unmarshal(bytes, &body)
+	if err != nil {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Verify that input is correct
+	if len(body.SourceWalletID) == 0 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if len(body.DestinationWalletID) == 0 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if len(body.Amount) == 0 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if len(body.Currency) == 0 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	// Put request in queue
 
 	// Wait for response to request
@@ -63,8 +175,48 @@ func (mux *HTTPRequestMultiplexer) POST_Transfer(input *paths.MatchResult, write
 
 }
 
+func (mux *HTTPRequestMultiplexer) POST_Test(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
+
+	// Extract body of message
+	if request.ContentLength <= 0 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	bytes := make([]byte, request.ContentLength)
+	_, err := request.Body.Read(bytes)
+	if err != nil && !errors.Is(err, io.EOF) {
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	body := messages.POST_Deposit{}
+	err = json.Unmarshal(bytes, &body)
+	if err != nil {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Verify that input is correct
+
+	// Put request in queue
+
+	// Wait for response to request
+
+	// Send response to user
+	writer.Write(bytes)
+}
+
 func (mux *HTTPRequestMultiplexer) GET_WalletBalance(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
 
+	// Verify that input is correct
+	wallet_id, exist := input.WildcardSegments["wallet_id"]
+	if !exist {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if len(wallet_id) == 0 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	// Put request in queue
 
 	// Wait for response to request
@@ -74,6 +226,31 @@ func (mux *HTTPRequestMultiplexer) GET_WalletBalance(input *paths.MatchResult, w
 }
 
 func (mux *HTTPRequestMultiplexer) GET_TransactionHistory(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
+
+	// Verify that input is correct
+	wallet_id, exist := input.WildcardSegments["wallet_id"]
+	if !exist {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if len(wallet_id) == 0 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	from, exist := input.KeyValuePairs["from"]
+	if !exist {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if len(from) != 8 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	to, exist := input.KeyValuePairs["to"]
+	if exist && len(to) != 8 {
+		writer.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	// Put request in queue
 
@@ -123,7 +300,7 @@ func (mux *HTTPRequestMultiplexer) ProcessGETRequests(writer http.ResponseWriter
 		return
 	}
 
-	// Test request
+	// Test GET request
 	result = paths.MatchAndExtract(request.URL.Path, paths.Test)
 	if result.MatchFound {
 		mux.GET_Test(result, writer, request)
@@ -151,6 +328,13 @@ func (mux *HTTPRequestMultiplexer) ProcessPOSTRequests(writer http.ResponseWrite
 	result = paths.MatchAndExtract(request.URL.Path, paths.Transfer)
 	if result.MatchFound {
 		mux.POST_Transfer(result, writer, request)
+		return
+	}
+
+	// Test POST request
+	result = paths.MatchAndExtract(request.URL.Path, paths.Test)
+	if result.MatchFound {
+		mux.POST_Test(result, writer, request)
 		return
 	}
 
