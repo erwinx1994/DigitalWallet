@@ -6,6 +6,7 @@ const (
 	Wallets_balance             string = "/wallets/{wallet_id}/balance"
 	Wallets_transaction_history string = "/wallets/{wallet_id}/transaction_history"
 	Transfer                    string = "/transfer"
+	Test                        string = "/test"
 )
 
 // These can be determined by the patterns specified above

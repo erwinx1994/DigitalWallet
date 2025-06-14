@@ -56,7 +56,7 @@ func Test_APIGateway(t *testing.T) {
 	if err != nil && !errors.Is(err, io.EOF) {
 		t.Fatal(err)
 	}
-	expected_data := []byte("This is a test response")
+	expected_data := []byte("{\"Message\":\"Hi. This is a test response.\"}")
 	if !reflect.DeepEqual(bytes, expected_data) {
 		t.Fatal("Expected: ", string(expected_data), ", Got: ", string(bytes))
 	}
