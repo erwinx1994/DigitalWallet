@@ -14,12 +14,94 @@ func Test_LoadConfig(t *testing.T) {
 	}
 
 	expected_config := Config{
-		ListenPort:      "1120",
-		ReadTimeout:     60,
-		WriteTimeout:    60,
-		IdleTimeout:     60,
-		RetryInterval:   60,
-		ShutdownTimeout: 60,
+		HTTPServer: HTTPServer{
+			ListenPort:      "1120",
+			ReadTimeout:     60,
+			WriteTimeout:    60,
+			IdleTimeout:     60,
+			RetryInterval:   60,
+			ShutdownTimeout: 60,
+		},
+		DepositsService: Service{
+			RequestsQueue: RedisMessageQueue{
+				Host:      "localhost",
+				Port:      "1640",
+				Username:  "default",
+				Password:  "",
+				QueueName: "deposit_requests_queue",
+			},
+			ResponseQueue: RedisMessageQueue{
+				Host:      "localhost",
+				Port:      "1640",
+				Username:  "default",
+				Password:  "",
+				QueueName: "deposit_responses_queue",
+			},
+		},
+		WithdrawalService: Service{
+			RequestsQueue: RedisMessageQueue{
+				Host:      "localhost",
+				Port:      "1640",
+				Username:  "default",
+				Password:  "",
+				QueueName: "withdrawal_requests_queue",
+			},
+			ResponseQueue: RedisMessageQueue{
+				Host:      "localhost",
+				Port:      "1640",
+				Username:  "default",
+				Password:  "",
+				QueueName: "withdrawal_responses_queue",
+			},
+		},
+		TransferService: Service{
+			RequestsQueue: RedisMessageQueue{
+				Host:      "localhost",
+				Port:      "1640",
+				Username:  "default",
+				Password:  "",
+				QueueName: "transfer_requests_queue",
+			},
+			ResponseQueue: RedisMessageQueue{
+				Host:      "localhost",
+				Port:      "1640",
+				Username:  "default",
+				Password:  "",
+				QueueName: "transfer_responses_queue",
+			},
+		},
+		BalanceService: Service{
+			RequestsQueue: RedisMessageQueue{
+				Host:      "localhost",
+				Port:      "1640",
+				Username:  "default",
+				Password:  "",
+				QueueName: "balance_requests_queue",
+			},
+			ResponseQueue: RedisMessageQueue{
+				Host:      "localhost",
+				Port:      "1640",
+				Username:  "default",
+				Password:  "",
+				QueueName: "balance_responses_queue",
+			},
+		},
+		TransactionHistoryService: Service{
+			RequestsQueue: RedisMessageQueue{
+				Host:      "localhost",
+				Port:      "1640",
+				Username:  "default",
+				Password:  "",
+				QueueName: "transaction_history_requests_queue",
+			},
+			ResponseQueue: RedisMessageQueue{
+				Host:      "localhost",
+				Port:      "1640",
+				Username:  "default",
+				Password:  "",
+				QueueName: "transaction_history_responses_queue",
+			},
+		},
 	}
 	if !reflect.DeepEqual(*config, expected_config) {
 		t.Fatal("Expected: ", expected_config, " Got: ", *config)

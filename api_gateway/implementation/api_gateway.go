@@ -42,27 +42,27 @@ func (api_gateway *APIGateway) async_http_server() {
 		log.Println("Starting up HTTP server.")
 
 		// Create a listener
-		listener, err := net.Listen("tcp", ":"+config.ListenPort)
+		listener, err := net.Listen("tcp", ":"+config.HTTPServer.ListenPort)
 		if err != nil {
-			log.Print("Unable to listen on port: ", config.ListenPort)
-			log.Print("Reestablishing in ", config.RetryInterval, " s.")
-			time.Sleep(time.Duration(config.RetryInterval) * time.Second)
+			log.Print("Unable to listen on port: ", config.HTTPServer.ListenPort)
+			log.Print("Reestablishing in ", config.HTTPServer.RetryInterval, " s.")
+			time.Sleep(time.Duration(config.HTTPServer.RetryInterval) * time.Second)
 			continue
 		}
-		log.Println("Listening on port: ", config.ListenPort)
+		log.Println("Listening on port: ", config.HTTPServer.ListenPort)
 
 		api_gateway.http_server = &http.Server{
-			Addr:         ":" + config.ListenPort,
+			Addr:         ":" + config.HTTPServer.ListenPort,
 			Handler:      &api_gateway.http_multiplexer,
-			ReadTimeout:  time.Duration(config.ReadTimeout) * time.Second,
-			WriteTimeout: time.Duration(config.WriteTimeout) * time.Second,
-			IdleTimeout:  time.Duration(config.IdleTimeout) * time.Second,
+			ReadTimeout:  time.Duration(config.HTTPServer.ReadTimeout) * time.Second,
+			WriteTimeout: time.Duration(config.HTTPServer.WriteTimeout) * time.Second,
+			IdleTimeout:  time.Duration(config.HTTPServer.IdleTimeout) * time.Second,
 		}
 		err = api_gateway.http_server.Serve(listener)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Print("Error with HTTP server: ", err.Error())
-			log.Print("Reestablishing in ", config.RetryInterval, " s.")
-			time.Sleep(time.Duration(config.RetryInterval) * time.Second)
+			log.Print("Reestablishing in ", config.HTTPServer.RetryInterval, " s.")
+			time.Sleep(time.Duration(config.HTTPServer.RetryInterval) * time.Second)
 			continue
 		}
 	}

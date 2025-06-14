@@ -1,6 +1,78 @@
-listen_port:                      1120
-read_timeout:                     60 # s
-write_timeout:                    60 # s
-idle_timeout:                     60 # s
-retry_interval:                   60 # s
-shutdown_timeout:                 60 # s
+http_server:
+  listen_port:                      1120
+  read_timeout:                     60 # s
+  write_timeout:                    60 # s
+  idle_timeout:                     60 # s
+  retry_interval:                   60 # s
+  shutdown_timeout:                 60 # s
+
+deposits_service:
+  redis_requests_queue:
+    host:                           "localhost"
+    port:                           "1640"
+    username:                       "default"
+    password:                       ""
+    queue_name:                     "deposit_requests_queue"
+  redis_response_queue:
+    host:                           "localhost"
+    port:                           "1640"
+    username:                       "default"
+    password:                       ""
+    queue_name:                     "deposit_responses_queue"
+
+withdrawal_service:
+  redis_requests_queue:
+    host:                           "localhost"
+    port:                           "1640"
+    username:                       "default"
+    password:                       ""
+    queue_name:                     "withdrawal_requests_queue"
+  redis_response_queue:
+    host:                           "localhost"
+    port:                           "1640"
+    username:                       "default"
+    password:                       ""
+    queue_name:                     "withdrawal_responses_queue"
+
+transfer_service:
+  redis_requests_queue:
+    host:                           "localhost"
+    port:                           "1640"
+    username:                       "default"
+    password:                       ""
+    queue_name:                     "transfer_requests_queue"
+  redis_response_queue:
+    host:                           "localhost"
+    port:                           "1640"
+    username:                       "default"
+    password:                       ""
+    queue_name:                     "transfer_responses_queue"
+
+balance_service:
+  redis_requests_queue:
+    host:                           "localhost"
+    port:                           "1640"
+    username:                       "default"
+    password:                       ""
+    queue_name:                     "balance_requests_queue"
+  redis_response_queue:
+    host:                           "localhost"
+    port:                           "1640"
+    username:                       "default"
+    password:                       ""
+    queue_name:                     "balance_responses_queue"
+
+transaction_history_service:
+  redis_requests_queue:
+    host:                           "localhost"
+    port:                           "1640"
+    username:                       "default"
+    password:                       ""
+    queue_name:                     "transaction_history_requests_queue"
+  redis_response_queue:
+    host:                           "localhost"
+    port:                           "1640"
+    username:                       "default"
+    password:                       ""
+    queue_name:                     "transaction_history_responses_queue"
+
