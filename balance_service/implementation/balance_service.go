@@ -69,6 +69,8 @@ func (service *BalanceService) async_run() {
 		log.Println("Shutdown balance service.")
 	}()
 
+	log.Println("Started up balance service.")
+
 	err := service.prepare_redis_clients()
 	if err != nil {
 		log.Fatal("Could not connect to Redis server: ", err)
@@ -77,7 +79,12 @@ func (service *BalanceService) async_run() {
 	// Service continues running until terminated by user
 	for service.is_alive.Load() {
 
-		log.Println("Started up balance service.")
+		// Get next request from requests queue
+
+		// Query postgre SQL database
+
+		// Put response into response queue
+
 		time.Sleep(1 * time.Second)
 	}
 }

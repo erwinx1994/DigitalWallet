@@ -1,6 +1,7 @@
 package messages
 
 const (
+	Action_unknown                 int = 0
 	Action_deposit                 int = 1
 	Action_withdraw                int = 2
 	Action_transfer                int = 3
