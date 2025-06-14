@@ -1,4 +1,3 @@
-
 # Digital wallet
 
 This repository provides multiple applications that work together to function as a backend for a digital wallet service. The purpose of each application is described below.
@@ -23,6 +22,30 @@ This repository provides multiple applications that work together to function as
     Retrieve transaction history of wallet
 
 The system design diagram that connects them all can be found in the [./system_design/Simplified digital wallet system.pdf](./system_design/Simplified%20digital%20wallet%20system.pdf) file in this repository.
+
+## Client application
+
+The client application can be found in the **api_client** subfolder of this repository. Once compiled, it can be used to interact with the backend applications to manage your wallet.
+
+This command allows you to deposit an amount of money in the specified wallet in the specified currency.
+
+	api_client deposit <wallet_id> <currency> <amount>
+
+This command allows you to withdraw an amount of money from the specified wallet in the specified currency.
+
+	api_client withdraw <wallet_id> <currency> <amount>
+
+This command allows you to transfer an amount of money from source to destination wallets of the same currency.
+
+	api_client transfer <source_wallet_id> <destination_wallet_id> <currency> <amount>
+
+This command allows you to get the balance of the specified wallet.
+
+	api_client get_balance <wallet_id>
+
+This command allows you to get the transaction history of the specified wallet from a start date to end date, inclusive.
+
+	api_client get_transaction_history <wallet_id> <start_date> <end_date>
 
 ## Design of RESTful API
 

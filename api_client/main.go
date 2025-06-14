@@ -1,11 +1,11 @@
 package main
 
 import (
+	"api_client/config"
+	"api_client/implementation"
 	"fmt"
 	"log"
-	"net/http"
-	"net/url"
-	"time"
+	"os"
 )
 
 const (
@@ -13,73 +13,57 @@ const (
 	http_timeout      int    = 30 // s
 )
 
-/*
-The following HTTP requests need to be tested.
+func print_help_menu() {
 
-Deposit money into wallet
-POST /wallets/{wallet_id}/deposits
+	fmt.Println("DIGITAL WALLET INC CLIENT")
+	fmt.Println()
 
-	{
-	    "amount": 5000,
-	    "currency": "XXX"
-	}
+	fmt.Println("This command allows you to deposit an amount of money in the specified wallet in the specified currency.")
+	fmt.Println()
 
-Withdraw money from a wallet
-POST /wallets/{wallet_id}/withdrawals
+	fmt.Println("\tapi_client deposit <wallet_id> <currency> <amount>")
+	fmt.Println()
 
-	{
-	    "amount": 5000,
-	    "currency": "XXX"
-	}
+	fmt.Println("This command allows you to withdraw an amount of money from the specified wallet in the specified currency.")
+	fmt.Println()
 
-Transfer money from one wallet to another
-POST /transfer
+	fmt.Println("\tapi_client withdraw <wallet_id> <currency> <amount>")
+	fmt.Println()
 
-	{
-	    "source_wallet_id": "id1",
-	    "destination_wallet_id": "id2",
-	    "amount": 5000,
-	    "currency": "XXX"
-	}
+	fmt.Println("This command allows you to transfer an amount of money from source to destination wallets of the same currency.")
+	fmt.Println()
 
-Retrieve balance of a wallet
-GET /wallets/{wallet_id}/balance
+	fmt.Println("\tapi_client transfer <source_wallet_id> <destination_wallet_id> <currency> <amount>")
+	fmt.Println()
 
-Retrieve transaction history of a wallet
-GET /wallets/{wallet_id}/transaction_history?from=YYYYMMDD&to=YYYYMMDD
-*/
-func test_http_client() {
+	fmt.Println("This command allows you to get the balance of the specified wallet.")
+	fmt.Println()
 
-	http_client := http.Client{
-		Timeout: time.Duration(http_timeout) * time.Second,
-	}
+	fmt.Println("\tapi_client get_balance <wallet_id>")
+	fmt.Println()
 
-	get_balance := http.Request{
-		Method: "GET",
-		URL: &url.URL{
-			Scheme: "http",
-			Host:   "localhost:1120",
-			Path:   "/test",
-		},
-	}
+	fmt.Println("This command allows you to get the transaction history of the specified wallet from a start date to end date, inclusive.")
+	fmt.Println()
 
-	response, err := http_client.Do(&get_balance)
-	if err != nil {
-		log.Fatal("HTTP GET request failed.", err.Error())
-	}
-
-	fmt.Println(response.Header)
-	bytes_read := make([]byte, response.ContentLength)
-	number_of_bytes_read, err := response.Body.Read(bytes_read)
-	fmt.Println(number_of_bytes_read)
-	for number_of_bytes_read > 0 {
-		fmt.Println(string(bytes_read[:number_of_bytes_read]))
-		number_of_bytes_read, err = response.Body.Read(bytes_read)
-	}
-	defer response.Body.Close()
-
+	fmt.Println("\tapi_client get_transaction_history <wallet_id> <start_date> <end_date>")
+	fmt.Println()
 }
 
 func main() {
-	test_http_client()
+
+	if len(os.Args) == 1 {
+		print_help_menu()
+		return
+	}
+
+	// Load configuration file
+	config_file_path := "config.yml"
+	config, err := config.Load(config_file_path)
+	if err != nil {
+		log.Fatal("Unable to load configuration file at ", config_file_path)
+	}
+
+	// Run user command. The client will wait for a response from the server before shutting down.
+	api_client := implementation.CreateAPIClient(config)
+	api_client.Run()
 }
