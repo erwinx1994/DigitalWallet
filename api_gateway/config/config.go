@@ -27,7 +27,7 @@ type RedisMessageQueue struct {
 
 type Service struct {
 	RequestsQueue  RedisMessageQueue `yaml:"redis_requests_queue"`
-	ResponsesQueue RedisMessageQueue `yaml:"redis_response_queue"`
+	ResponsesQueue RedisMessageQueue `yaml:"redis_responses_queue"`
 }
 
 type Config struct {

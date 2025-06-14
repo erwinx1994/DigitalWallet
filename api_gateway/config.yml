@@ -14,7 +14,7 @@ deposits_service:
     password:                       ""
     queue_name:                     "deposit_requests_queue"
     timeout:                        5 # s
-  redis_response_queue:
+  redis_responses_queue:
     host:                           "localhost"
     port:                           "1640"
     username:                       "default"
@@ -30,7 +30,7 @@ withdrawal_service:
     password:                       ""
     queue_name:                     "withdrawal_requests_queue"
     timeout:                        5 # s
-  redis_response_queue:
+  redis_responses_queue:
     host:                           "localhost"
     port:                           "1640"
     username:                       "default"
@@ -46,7 +46,7 @@ transfer_service:
     password:                       ""
     queue_name:                     "transfer_requests_queue"
     timeout:                        5 # s
-  redis_response_queue:
+  redis_responses_queue:
     host:                           "localhost"
     port:                           "1640"
     username:                       "default"
@@ -62,7 +62,7 @@ balance_service:
     password:                       ""
     queue_name:                     "balance_requests_queue"
     timeout:                        5 # s
-  redis_response_queue:
+  redis_responses_queue:
     host:                           "localhost"
     port:                           "1640"
     username:                       "default"
@@ -78,7 +78,7 @@ transaction_history_service:
     password:                       ""
     queue_name:                     "transaction_history_requests_queue"
     timeout:                        5 # s
-  redis_response_queue:
+  redis_responses_queue:
     host:                           "localhost"
     port:                           "1640"
     username:                       "default"
