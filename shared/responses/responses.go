@@ -3,6 +3,7 @@ package responses
 const (
 	Status_unknown    int = 0
 	Status_successful int = 1
+	Status_failed     int = 2
 )
 
 type Deposit struct {

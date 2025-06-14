@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	"shared/messages"
+	"shared/responses"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -88,6 +89,7 @@ func (service *BalanceService) async_run() {
 		string_slice, err := service.requests_queue.BRPop(timeout_context, timeout, queue_name).Result()
 		if err != nil {
 			cancel()
+			log.Println("Failed to receive messages from requests queue.")
 			continue
 		}
 		cancel()
@@ -102,14 +104,35 @@ func (service *BalanceService) async_run() {
 		err = json.Unmarshal([]byte(string_slice[1]), &redis_message)
 		if err != nil {
 			log.Println("Failed to deserialise JSON message. Should not happen in production.")
-			// In practice, we will need an error notification system. Building an error
-			// notification is skipped due to time constraints.
+			// In practice, we will need an error notification system. I have skipped
+			// building an error notification system due to time constraints.
 			continue
 		}
 
-		// Query postgre SQL database
+		// Query PostgreSQL database
 
-		// Put response into response queue
+		// Prepare response
+		redis_message.Body = responses.Balance{}
+		bytes_to_send, err := json.Marshal(redis_message)
+		if err != nil {
+			log.Println("Failed to serialise response message. Should not happen in production.")
+			// In practice, we will need an error notification system. I have skipped
+			// building an error notification system due to time constraints.
+			continue
+		}
+
+		// Put response into responses queue
+		timeout = time.Duration(service.config.ResponsesQueue.Timeout) * time.Second
+		queue_name = service.config.ResponsesQueue.QueueName
+		timeout_context, cancel = context.WithTimeout(service.background_context, timeout)
+		_, err = service.responses_queue.LPush(timeout_context, queue_name, bytes_to_send).Result()
+		if err != nil {
+			cancel()
+			log.Println("Failed to put response into responses queue.")
+			return
+		}
+		cancel()
+
 	}
 }
 

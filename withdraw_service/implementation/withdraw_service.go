@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"shared/messages"
+	"shared/responses"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -107,9 +108,29 @@ func (service *WithdrawService) async_run() {
 			continue
 		}
 
-		// Query postgre SQL database
+		// Query PostgreSQL database
 
-		// Put response into response queue
+		// Prepare response
+		redis_message.Body = responses.Withdraw{}
+		bytes_to_send, err := json.Marshal(redis_message)
+		if err != nil {
+			log.Println("Failed to serialise response message. Should not happen in production.")
+			// In practice, we will need an error notification system. I have skipped
+			// building an error notification system due to time constraints.
+			continue
+		}
+
+		// Put response into responses queue
+		timeout = time.Duration(service.config.ResponsesQueue.Timeout) * time.Second
+		queue_name = service.config.ResponsesQueue.QueueName
+		timeout_context, cancel = context.WithTimeout(service.background_context, timeout)
+		_, err = service.responses_queue.LPush(timeout_context, queue_name, bytes_to_send).Result()
+		if err != nil {
+			cancel()
+			log.Println("Failed to put response into responses queue.")
+			return
+		}
+		cancel()
 	}
 }
 
