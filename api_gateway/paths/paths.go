@@ -22,13 +22,21 @@ type MatchResult struct {
 	KeyValuePairs    map[string]string
 }
 
-// The Parser.Match function tries to match the path with the specified pattern.
-// It returns true if a match was found. Otherwise, it returns false.
-// It also extracts the wildcard segments and key values pairs in the path.
-// It assumes that both the path and pattern contains only these characters:
-// 1-9, a-z, A-Z
-// Using unicode characters in the path and pattern will cause erroneous results.
-// This function completes in O(n) time complexity.
+/*
+The Parser.Match function tries to match the path with the specified pattern.
+It returns true if a match was found. Otherwise, it returns false.
+It also extracts the wildcard segments and key values pairs in the path.
+
+It assumes that both the path and pattern contains only these characters:
+1-9, a-z, A-Z
+
+Using unicode characters in the path and pattern will cause erroneous results.
+
+This function completes in O((n + m)x) time complexity where n is the length of the path,
+m is the length of the pattern and x is the overhead of string concatenation
+for extracting wildcard segments, keys and values. Go's standard string
+concatenation operator += was used for its simplicity.
+*/
 func MatchAndExtract(path, pattern string) *MatchResult {
 
 	result := MatchResult{
