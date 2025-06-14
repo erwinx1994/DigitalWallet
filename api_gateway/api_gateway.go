@@ -167,6 +167,14 @@ type APIGateway struct {
 	waitgroup        sync.WaitGroup
 }
 
+func CreateAPIGateway(config *config.Config) *APIGateway {
+	api_gateway := &APIGateway{
+		config:      config,
+		http_server: nil,
+	}
+	return api_gateway
+}
+
 func (api_gateway *APIGateway) async_http_server() {
 	defer func() {
 		api_gateway.waitgroup.Done()

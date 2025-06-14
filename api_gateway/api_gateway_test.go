@@ -13,7 +13,7 @@ import (
 
 func Test_APIGateway(t *testing.T) {
 
-	config, err := config.Load("./config/config_test.yml")
+	config, err := config.Load("./config.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
