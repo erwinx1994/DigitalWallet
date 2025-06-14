@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+// A custom HTTP request multiplexer is needed as the multiplexer also needs to store the responses
+// to each request in a map which will be populated by another thread.
 type HTTPRequestMultiplexer struct {
 	api_responses sync.Map
 }

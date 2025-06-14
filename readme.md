@@ -55,6 +55,16 @@ The system design diagram that connects them all can be found in the [./system_d
     Retrieve transaction history of a wallet
     GET /wallets/{wallet_id}/transaction_history?from=YYYYMMDD&to=YYYYMMDD
 
+## Set up of environment
+
+Firewalls in your test environment may need to be disabled for the Digital Wallet backend to work correctly. The screenshots below show how to disable Windows firewall if you are testing on a Windows machine. 
+
+![](./images/firewall_and_network_protection_1.png)
+
+![](./images/firewall_and_network_protection_2.png)
+
+![](./images/firewall_and_network_protection_3.png)
+
 ## Set up of databases 
 
 PostgreSQL must be installed and set up correctly on your test computer before running this program.
