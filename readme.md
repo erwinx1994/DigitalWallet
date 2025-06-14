@@ -88,13 +88,42 @@ Firewalls in your test environment may need to be disabled for the Digital Walle
 
 ![](./images/firewall_and_network_protection_3.png)
 
-## Set up of databases 
+## Set up of PostgreSQL to store wallet information and transaction histories 
 
 PostgreSQL must be installed and set up correctly on your test computer before running this program.
 
-## Set up of message queues
+## Set up of Redis as a message queueing service
 
-Redis must be installed and set up correctly on your test computer before running this program.
+Redis is used as an in-memory message queue for passing messages from one backend application to another. It must be installed and set up correctly on your test computer before starting the backend applications. Instructions to install Redis Open Source on WSL for Windows can be found here.
+
+    https://redis.io/docs/latest/operate/oss_and_stack/install/archive/install-redis/install-redis-on-windows/
+
+Once installed, run the following command to start a Redis server on WSL at port 1640 with the **default** username and empty password.
+
+    sudo redis-server --port 1640
+
+Use the following command to shut down the Redis server from another WSL window after you are done testing.
+
+    sudo redis-cli -h localhost -port 1640 shutdown
+
+No other initial set up of the Redis Server needs to be done. Its default settings can be used just fine. The **api_gateway** will automatically request for a new queue to be created on the server when needed. When the last message on each queue is consumed, the consuming application will instruct Redis to delete the queue automatically. 
+
+The names of all message queues used by the backend applications are summarised below. How they relate to each other is shown in the simplified system design diagram.
+
+    deposit_requests_queue
+    deposit_responses_queue
+
+    withdrawal_requests_queue
+    withdrawal_responses_queue
+
+    transfer_requests_queue
+    transfer_responses_queue
+
+    balance_requests_queue
+    balance_responses_queue
+
+    transaction_history_requests_queue
+    transaction_history_responses_queue
 
 ## How to compile the code
 
