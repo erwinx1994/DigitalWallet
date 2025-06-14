@@ -3,7 +3,7 @@ redis_requests_queue:
   port:                           "1640"
   username:                       "default"
   password:                       ""
-  queue_name:                     "balance_requests_queue"
+  queue_name:                     "deposit_requests_queue"
   timeout:                        5 # s
 
 redis_responses_queue:
@@ -11,5 +11,5 @@ redis_responses_queue:
   port:                           "1640"
   username:                       "default"
   password:                       ""
-  queue_name:                     "balance_responses_queue"
+  queue_name:                     "deposit_responses_queue"
   timeout:                        5 # s
