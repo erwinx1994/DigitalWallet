@@ -2,7 +2,9 @@ package implementation
 
 import (
 	"context"
+	"encoding/json"
 	"log"
+	"shared/messages"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -12,29 +14,29 @@ import (
 )
 
 type TransferService struct {
-	config          *config.Config
-	is_alive        atomic.Bool
-	waitgroup       sync.WaitGroup
-	requests_queue  *redis.Client
-	responses_queue *redis.Client
+	config             *config.Config
+	is_alive           atomic.Bool
+	waitgroup          sync.WaitGroup
+	background_context context.Context
+	requests_queue     *redis.Client
+	responses_queue    *redis.Client
 }
 
 func CreateTransferService(config *config.Config) *TransferService {
 	service := &TransferService{
-		config: config,
+		config:             config,
+		background_context: context.Background(),
 	}
 	return service
 }
 
 func (service *TransferService) prepare_redis_clients() error {
 
-	background_context := context.Background()
-
 	{
 		// Prepare requests queue
 		requests_queue := redis.NewClient(service.config.RequestsQueue.GetRedisOptions())
 
-		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(service.config.RequestsQueue.Timeout)*time.Second)
+		timeout_context, cancel := context.WithTimeout(service.background_context, time.Duration(service.config.RequestsQueue.Timeout)*time.Second)
 		_, err := requests_queue.Ping(timeout_context).Result()
 		if err != nil {
 			cancel()
@@ -49,7 +51,7 @@ func (service *TransferService) prepare_redis_clients() error {
 		// Prepare responses queue
 		responses_queue := redis.NewClient(service.config.ResponsesQueue.GetRedisOptions())
 
-		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(service.config.ResponsesQueue.Timeout)*time.Second)
+		timeout_context, cancel := context.WithTimeout(service.background_context, time.Duration(service.config.ResponsesQueue.Timeout)*time.Second)
 		_, err := responses_queue.Ping(timeout_context).Result()
 		if err != nil {
 			cancel()
@@ -69,6 +71,8 @@ func (service *TransferService) async_run() {
 		log.Println("Shutdown transfer service.")
 	}()
 
+	log.Println("Started up transfer service.")
+
 	err := service.prepare_redis_clients()
 	if err != nil {
 		log.Fatal("Could not connect to Redis server: ", err)
@@ -77,8 +81,36 @@ func (service *TransferService) async_run() {
 	// Service continues running until terminated by user
 	for service.is_alive.Load() {
 
-		log.Println("Started up transfer service.")
-		time.Sleep(1 * time.Second)
+		// Get next request from requests queue
+		timeout := time.Duration(service.config.RequestsQueue.Timeout) * time.Second
+		queue_name := service.config.RequestsQueue.QueueName
+		timeout_context, cancel := context.WithTimeout(service.background_context, timeout)
+		string_slice, err := service.requests_queue.BRPop(timeout_context, timeout, queue_name).Result()
+		if err != nil {
+			cancel()
+			continue
+		}
+		cancel()
+
+		// string_slice[0] gives the name of the queue
+		// string_slice[1] gives the data retrieved from the queue
+
+		// Deserialise JSON data received
+		redis_message := messages.RedisMessage{
+			Body: messages.POST_Transfer{},
+		}
+		err = json.Unmarshal([]byte(string_slice[1]), &redis_message)
+		if err != nil {
+			log.Println("Failed to deserialise JSON message. Should not happen in production.")
+			// In practice, we will need an error notification system. Building an error
+			// notification is skipped due to time constraints.
+			continue
+		}
+
+		// Query postgre SQL database
+
+		// Put response into response queue
+
 	}
 }
 
