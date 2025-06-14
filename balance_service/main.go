@@ -35,6 +35,6 @@ func main() {
 	signal.Notify(abort_channel, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	<-abort_channel
 
-	// Shutdown the HTTP server gracefully
+	// Shutdown the balance service gracefully
 	balance_service.Shutdown()
 }
