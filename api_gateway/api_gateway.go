@@ -19,10 +19,6 @@ type QueueItem struct {
 	json_body []byte
 }
 
-type TestResponse struct {
-	Message string `json:",omitempty"`
-}
-
 // A custom HTTP request multiplexer is needed as the multiplexer also needs to store the responses
 // to each request in a map which will be populated by another thread.
 type HTTPRequestMultiplexer struct {
@@ -89,6 +85,9 @@ func (mux *HTTPRequestMultiplexer) GET_Test(input *paths.MatchResult, writer htt
 	log.Println("Header: ", request.Header)
 
 	// Send test response to user
+	type TestResponse struct {
+		Message string `json:",omitempty"`
+	}
 	test_response := TestResponse{
 		Message: "Hi. This is a test response.",
 	}
