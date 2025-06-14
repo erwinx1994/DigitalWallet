@@ -26,7 +26,7 @@ type MatchResult struct {
 /*
 The Parser.Match function tries to match the path with the specified pattern.
 It returns true if a match was found. Otherwise, it returns false.
-It also extracts the wildcard segments and key values pairs in the path.
+It also extracts the wildcard segments and the key values pairs in the path.
 
 It assumes that both the path and pattern contains only these characters:
 1-9, a-z, A-Z
@@ -37,6 +37,10 @@ This function completes in O((n + m)x) time complexity where n is the length of 
 m is the length of the pattern and x is the overhead of string concatenation
 for extracting wildcard segments, keys and values. Go's standard string
 concatenation operator += was used for its simplicity.
+
+It is possible to further reduce the time complexity to O(n + m) by using a custom
+string builder (block of bytes with fixed maximum size and a pointer) instead of
+Go's simple string concatenation operator +=. That is left as future work.
 */
 func MatchAndExtract(path, pattern string) *MatchResult {
 
@@ -51,9 +55,10 @@ func MatchAndExtract(path, pattern string) *MatchResult {
 	wildcard_segment := ""
 	wildcard_segment_name := ""
 
+	// Try matching each character of path with pattern
 	for path_index < len(path) && pattern_index < len(pattern) {
 
-		// Invalid match found
+		// Mismatching characters found
 		if path[path_index] != pattern[pattern_index] {
 			result.MatchFound = false
 			result.WildcardSegments = nil
@@ -61,7 +66,8 @@ func MatchAndExtract(path, pattern string) *MatchResult {
 			return &result
 		}
 
-		// Extract wildcard segment, if valid
+		// Found start of wildcard pattern as indicated by a left curly brace {
+		// Move the path_index and pattern_index to the closing right curly brace }
 		if path[path_index] == '{' && pattern[pattern_index] == '{' {
 
 			path_index++
@@ -82,15 +88,20 @@ func MatchAndExtract(path, pattern string) *MatchResult {
 				wildcard_segment = ""
 				wildcard_segment_name = ""
 			} else {
-				// Invalid match found
+				// It is invalid for path_index to reach the end of path without finding
+				// a closing curling brace }
 				result.MatchFound = false
 				result.WildcardSegments = nil
 				result.KeyValuePairs = nil
 				return &result
 			}
 
+			// At this point, it is guaranteed that both path_index and pattern_index
+			// point to the right curly brace }
 		}
 
+		// Both path[path_index] and pattern[pattern_index] are currently.
+		// Increment both indices.
 		path_index++
 		pattern_index++
 	}
@@ -104,44 +115,50 @@ func MatchAndExtract(path, pattern string) *MatchResult {
 		return &result
 	}
 
-	// Extract key value pairs from query string, if valid
-	if path_index < len(path) && path[path_index] == '?' {
+	// Pattern is fully matched.
+	// Other than the remaining query string, it is invalid for the path
+	// to be longer than the pattern
+	if path_index < len(path) && path[path_index] != '?' {
+		result.MatchFound = false
+		result.WildcardSegments = nil
+		result.KeyValuePairs = nil
+		return &result
+	}
+
+	// Extract key value pairs from query string
+	path_index++
+	for path_index < len(path) {
+
+		// Extract key
+		key := ""
+		for path_index < len(path) && path[path_index] != '=' {
+			key += string(path[path_index])
+			path_index++
+		}
+
+		if !(path_index < len(path) && path[path_index] == '=') {
+			// Invalid query string found
+			result.MatchFound = false
+			result.WildcardSegments = nil
+			result.KeyValuePairs = nil
+			return &result
+		}
 
 		path_index++
 
-		for path_index < len(path) {
-
-			// Extract key
-			key := ""
-			for path_index < len(path) && path[path_index] != '=' {
-				key += string(path[path_index])
-				path_index++
-			}
-
-			if !(path_index < len(path) && path[path_index] == '=') {
-				// Invalid query string found
-				result.MatchFound = false
-				result.WildcardSegments = nil
-				result.KeyValuePairs = nil
-				return &result
-			}
-
+		// Extract value
+		value := ""
+		for path_index < len(path) && path[path_index] != '&' {
+			value += string(path[path_index])
 			path_index++
-
-			// Extract value
-			value := ""
-			for path_index < len(path) && path[path_index] != '&' {
-				value += string(path[path_index])
-				path_index++
-			}
-
-			if path_index < len(path) && path[path_index] == '&' {
-				path_index++
-			}
-
-			// Store result
-			result.KeyValuePairs[key] = value
 		}
+
+		if path_index < len(path) && path[path_index] == '&' {
+			path_index++
+		}
+
+		// Store result
+		result.KeyValuePairs[key] = value
 	}
 	return &result
 }

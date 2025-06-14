@@ -93,4 +93,12 @@ func Test_MatchAndExtract(t *testing.T) {
 			t.Error("Expected: ", expected, ", Got: ", result.MatchFound)
 		}
 	}
+	{
+		path := "/wallets/{wallet_id}"
+		result := MatchAndExtract(path, Wallets_transaction_history)
+		expected := false
+		if result.MatchFound != expected {
+			t.Error("Expected: ", expected, ", Got: ", result.MatchFound)
+		}
+	}
 }
