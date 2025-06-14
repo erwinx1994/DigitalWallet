@@ -28,7 +28,12 @@ func CreateAPIGateway(config *config.Config) *APIGateway {
 	api_gateway := &APIGateway{
 		config:      config,
 		http_server: nil,
+		http_multiplexer: HTTPRequestMultiplexer{
+			config:  config,
+			context: context.Background(),
+		},
 	}
+	api_gateway.http_multiplexer.global_id.Store(0)
 	return api_gateway
 }
 

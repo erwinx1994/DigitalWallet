@@ -1,14 +1,17 @@
 package implementation
 
 import (
+	"api_gateway/config"
 	"api_gateway/paths"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"log"
 	"net/http"
 	"shared/messages"
-	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -19,7 +22,13 @@ type QueueItem struct {
 }
 
 type HTTPRequestMultiplexer struct {
-	api_responses sync.Map
+	config    *config.Config
+	context   context.Context
+	global_id atomic.Int64
+	// Global unique id for tracking messages. This is required if there are multiple threads
+	// putting items in the queue. The responses may not arrive in order.
+	// should use twitter's snowflake approach or a globally unique identifier but lack of time.
+	// This is ignored for now. Assume only a single thread puts items on the queue.
 
 	// Resource handles to request and response queues
 	deposit_requests_queue              *redis.Client
@@ -32,6 +41,49 @@ type HTTPRequestMultiplexer struct {
 	balance_responses_queue             *redis.Client
 	transaction_history_requests_queue  *redis.Client
 	transaction_history_responses_queue *redis.Client
+}
+
+func (mux *HTTPRequestMultiplexer) send_request_and_return_response(
+	bytes_to_send []byte,
+	backend_service *config.Service,
+	requests_queue *redis.Client,
+	responses_queue *redis.Client,
+	writer http.ResponseWriter) {
+
+	// Define aliases
+	timeout := time.Duration(backend_service.RequestsQueue.Timeout) * time.Second
+	queue_name := backend_service.RequestsQueue.QueueName
+
+	// Put request in queue
+	timeout_context, cancel := context.WithTimeout(mux.context, timeout)
+	_, err := requests_queue.LPush(timeout_context, queue_name, bytes_to_send).Result()
+	if err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
+		cancel()
+		return
+	}
+	cancel()
+
+	// Define aliases
+	timeout = time.Duration(backend_service.ResponsesQueue.Timeout) * time.Second
+	queue_name = backend_service.ResponsesQueue.QueueName
+
+	// Wait for response to request
+	timeout_context, cancel = context.WithTimeout(mux.context, timeout)
+	string_slice, err := responses_queue.BRPop(timeout_context, timeout, queue_name).Result()
+	if err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
+		cancel()
+		return
+	}
+	cancel()
+
+	// string_slice[0] gives the name of the queue
+	// string_slice[1] gives the data retrieved from the queue
+	// Response is prepared by the primary backend service, not the API gateway.
+
+	// Send response to user
+	writer.Write([]byte(string_slice[1]))
 }
 
 func (mux *HTTPRequestMultiplexer) POST_Deposit(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
@@ -73,13 +125,25 @@ func (mux *HTTPRequestMultiplexer) POST_Deposit(input *paths.MatchResult, writer
 		return
 	}
 
-	// Put request in queue
+	// Prepare redis message
+	body.WalletID = wallet_id
+	redis_message := messages.RedisMessage{
+		MessageID: mux.global_id.Add(1),
+		Action:    messages.Action_deposit,
+		Body:      body,
+	}
+	bytes, err = json.Marshal(redis_message)
+	if err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-	// Wait for response to request
-
-	// Send response to user
-	writer.Write(bytes)
-
+	mux.send_request_and_return_response(
+		bytes,
+		&mux.config.DepositsService,
+		mux.deposit_requests_queue,
+		mux.deposit_responses_queue,
+		writer)
 }
 
 func (mux *HTTPRequestMultiplexer) POST_Withdrawal(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
@@ -121,12 +185,25 @@ func (mux *HTTPRequestMultiplexer) POST_Withdrawal(input *paths.MatchResult, wri
 		return
 	}
 
-	// Put request in queue
+	// Prepare redis message
+	body.WalletID = wallet_id
+	redis_message := messages.RedisMessage{
+		MessageID: mux.global_id.Add(1),
+		Action:    messages.Action_withdraw,
+		Body:      body,
+	}
+	bytes, err = json.Marshal(redis_message)
+	if err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-	// Wait for response to request
-
-	// Send response to user
-
+	mux.send_request_and_return_response(
+		bytes,
+		&mux.config.WithdrawalService,
+		mux.withdrawal_requests_queue,
+		mux.withdrawal_responses_queue,
+		writer)
 }
 
 func (mux *HTTPRequestMultiplexer) POST_Transfer(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
@@ -167,11 +244,24 @@ func (mux *HTTPRequestMultiplexer) POST_Transfer(input *paths.MatchResult, write
 		return
 	}
 
-	// Put request in queue
+	// Prepare redis message
+	redis_message := messages.RedisMessage{
+		MessageID: mux.global_id.Add(1),
+		Action:    messages.Action_transfer,
+		Body:      body,
+	}
+	bytes, err = json.Marshal(redis_message)
+	if err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-	// Wait for response to request
-
-	// Send response to user
+	mux.send_request_and_return_response(
+		bytes,
+		&mux.config.TransferService,
+		mux.transfer_requests_queue,
+		mux.transfer_responses_queue,
+		writer)
 
 }
 
@@ -195,12 +285,6 @@ func (mux *HTTPRequestMultiplexer) POST_Test(input *paths.MatchResult, writer ht
 		return
 	}
 
-	// Verify that input is correct
-
-	// Put request in queue
-
-	// Wait for response to request
-
 	// Send response to user
 	writer.Write(bytes)
 }
@@ -217,11 +301,28 @@ func (mux *HTTPRequestMultiplexer) GET_WalletBalance(input *paths.MatchResult, w
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	// Put request in queue
 
-	// Wait for response to request
+	// Prepare redis message
+	body := messages.GET_Balance{
+		WalletID: wallet_id,
+	}
+	redis_message := messages.RedisMessage{
+		MessageID: mux.global_id.Add(1),
+		Action:    messages.Action_get_balance,
+		Body:      body,
+	}
+	bytes, err := json.Marshal(redis_message)
+	if err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-	// Send response to user
+	mux.send_request_and_return_response(
+		bytes,
+		&mux.config.BalanceService,
+		mux.balance_requests_queue,
+		mux.balance_responses_queue,
+		writer)
 
 }
 
@@ -252,11 +353,29 @@ func (mux *HTTPRequestMultiplexer) GET_TransactionHistory(input *paths.MatchResu
 		return
 	}
 
-	// Put request in queue
+	// Prepare redis message
+	body := messages.GET_TransactionHistory{
+		WalletID: wallet_id,
+		From:     from,
+		To:       to,
+	}
+	redis_message := messages.RedisMessage{
+		MessageID: mux.global_id.Add(1),
+		Action:    messages.Action_get_transaction_history,
+		Body:      body,
+	}
+	bytes, err := json.Marshal(redis_message)
+	if err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-	// Wait for response to request
-
-	// Send response to user
+	mux.send_request_and_return_response(
+		bytes,
+		&mux.config.TransactionHistoryService,
+		mux.transaction_history_requests_queue,
+		mux.transaction_history_responses_queue,
+		writer)
 
 }
 

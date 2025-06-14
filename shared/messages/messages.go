@@ -39,6 +39,6 @@ type GET_Balance struct {
 
 type GET_TransactionHistory struct {
 	WalletID string `json:"wallet_id,omitempty"`
-	From     int    `json:"from,omitempty"` // YYYYMMDD
-	To       int    `json:"to,omitempty"`   // YYYYMMDD
+	From     string `json:"from,omitempty"` // YYYYMMDD
+	To       string `json:"to,omitempty"`   // YYYYMMDD
 }

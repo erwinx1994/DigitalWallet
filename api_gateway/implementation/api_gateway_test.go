@@ -21,10 +21,7 @@ func Test_APIGateway(t *testing.T) {
 	}
 
 	// Start running API gateway
-	api_gateway := &APIGateway{
-		config:      config,
-		http_server: nil,
-	}
+	api_gateway := CreateAPIGateway(config)
 	api_gateway.Run()
 	defer api_gateway.Shutdown()
 
@@ -93,5 +90,4 @@ func Test_APIGateway(t *testing.T) {
 			t.Fatal("Expected: ", string(expected_data), ", Got: ", string(bytes))
 		}
 	}
-
 }
