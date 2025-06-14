@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"sync"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type QueueItem struct {
@@ -13,13 +15,25 @@ type QueueItem struct {
 	json_body []byte
 }
 
-// A custom HTTP request multiplexer is needed as the multiplexer also needs to store the responses
-// to each request in a map which will be populated by another thread.
 type HTTPRequestMultiplexer struct {
 	api_responses sync.Map
+
+	// Resource handles to request and response queues
+	deposit_requests_queue              *redis.Client
+	deposit_responses_queue             *redis.Client
+	withdrawal_requests_queue           *redis.Client
+	withdrawal_responses_queue          *redis.Client
+	transfer_requests_queue             *redis.Client
+	transfer_responses_queue            *redis.Client
+	balance_requests_queue              *redis.Client
+	balance_responses_queue             *redis.Client
+	transaction_history_requests_queue  *redis.Client
+	transaction_history_responses_queue *redis.Client
 }
 
 func (mux *HTTPRequestMultiplexer) POST_Deposit(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
+
+	// Verify that the input is correct
 
 	// Put request in queue
 

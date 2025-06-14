@@ -22,18 +22,6 @@ type APIGateway struct {
 	http_server      *http.Server
 	http_multiplexer HTTPRequestMultiplexer
 	waitgroup        sync.WaitGroup
-
-	// Resource handles to request and response queues
-	deposit_requests_queue              *redis.Client
-	deposit_responses_queue             *redis.Client
-	withdrawal_requests_queue           *redis.Client
-	withdrawal_responses_queue          *redis.Client
-	transfer_requests_queue             *redis.Client
-	transfer_responses_queue            *redis.Client
-	balance_requests_queue              *redis.Client
-	balance_responses_queue             *redis.Client
-	transaction_history_requests_queue  *redis.Client
-	transaction_history_responses_queue *redis.Client
 }
 
 func CreateAPIGateway(config *config.Config) *APIGateway {
@@ -50,132 +38,152 @@ func (api_gateway *APIGateway) prepare_redis_clients() error {
 
 	{
 		// Prepare deposit requests queue
-		api_gateway.deposit_requests_queue = redis.NewClient(api_gateway.config.DepositsService.RequestsQueue.GetRedisOptions())
+		deposit_requests_queue := redis.NewClient(api_gateway.config.DepositsService.RequestsQueue.GetRedisOptions())
 
 		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.DepositsService.RequestsQueue.Timeout)*time.Second)
-		_, err := api_gateway.deposit_requests_queue.Ping(timeout_context).Result()
+		_, err := deposit_requests_queue.Ping(timeout_context).Result()
 		if err != nil {
 			cancel()
 			return err
 		}
 		cancel()
+
+		api_gateway.http_multiplexer.deposit_requests_queue = deposit_requests_queue
 	}
 
 	{
 		// Prepare deposit responses queue
-		api_gateway.deposit_responses_queue = redis.NewClient(api_gateway.config.DepositsService.ResponsesQueue.GetRedisOptions())
+		deposit_responses_queue := redis.NewClient(api_gateway.config.DepositsService.ResponsesQueue.GetRedisOptions())
 
 		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.DepositsService.ResponsesQueue.Timeout)*time.Second)
-		_, err := api_gateway.deposit_responses_queue.Ping(timeout_context).Result()
+		_, err := deposit_responses_queue.Ping(timeout_context).Result()
 		if err != nil {
 			cancel()
 			return err
 		}
 		cancel()
+
+		api_gateway.http_multiplexer.deposit_responses_queue = deposit_responses_queue
 	}
 
 	{
 		// Prepare withdrawal requests queue
-		api_gateway.withdrawal_requests_queue = redis.NewClient(api_gateway.config.WithdrawalService.RequestsQueue.GetRedisOptions())
+		withdrawal_requests_queue := redis.NewClient(api_gateway.config.WithdrawalService.RequestsQueue.GetRedisOptions())
 
 		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.WithdrawalService.RequestsQueue.Timeout)*time.Second)
-		_, err := api_gateway.withdrawal_requests_queue.Ping(timeout_context).Result()
+		_, err := withdrawal_requests_queue.Ping(timeout_context).Result()
 		if err != nil {
 			cancel()
 			return err
 		}
 		cancel()
+
+		api_gateway.http_multiplexer.withdrawal_requests_queue = withdrawal_requests_queue
 	}
 
 	{
 		// Prepare withdrawal responses queue
-		api_gateway.withdrawal_responses_queue = redis.NewClient(api_gateway.config.WithdrawalService.ResponsesQueue.GetRedisOptions())
+		withdrawal_responses_queue := redis.NewClient(api_gateway.config.WithdrawalService.ResponsesQueue.GetRedisOptions())
 
 		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.WithdrawalService.ResponsesQueue.Timeout)*time.Second)
-		_, err := api_gateway.withdrawal_responses_queue.Ping(timeout_context).Result()
+		_, err := withdrawal_responses_queue.Ping(timeout_context).Result()
 		if err != nil {
 			cancel()
 			return err
 		}
 		cancel()
+
+		api_gateway.http_multiplexer.withdrawal_responses_queue = withdrawal_responses_queue
 	}
 
 	{
 		// Prepare transfer requests queue
-		api_gateway.transfer_requests_queue = redis.NewClient(api_gateway.config.TransferService.RequestsQueue.GetRedisOptions())
+		transfer_requests_queue := redis.NewClient(api_gateway.config.TransferService.RequestsQueue.GetRedisOptions())
 
 		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.TransferService.RequestsQueue.Timeout)*time.Second)
-		_, err := api_gateway.transfer_requests_queue.Ping(timeout_context).Result()
+		_, err := transfer_requests_queue.Ping(timeout_context).Result()
 		if err != nil {
 			cancel()
 			return err
 		}
 		cancel()
+
+		api_gateway.http_multiplexer.transfer_requests_queue = transfer_requests_queue
 	}
 
 	{
 		// Prepare transfer responses queue
-		api_gateway.transfer_responses_queue = redis.NewClient(api_gateway.config.TransferService.ResponsesQueue.GetRedisOptions())
+		transfer_responses_queue := redis.NewClient(api_gateway.config.TransferService.ResponsesQueue.GetRedisOptions())
 
 		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.TransferService.ResponsesQueue.Timeout)*time.Second)
-		_, err := api_gateway.transfer_responses_queue.Ping(timeout_context).Result()
+		_, err := transfer_responses_queue.Ping(timeout_context).Result()
 		if err != nil {
 			cancel()
 			return err
 		}
 		cancel()
+
+		api_gateway.http_multiplexer.transfer_responses_queue = transfer_responses_queue
 	}
 
 	{
 		// Prepare balance requests queue
-		api_gateway.balance_requests_queue = redis.NewClient(api_gateway.config.BalanceService.RequestsQueue.GetRedisOptions())
+		balance_requests_queue := redis.NewClient(api_gateway.config.BalanceService.RequestsQueue.GetRedisOptions())
 
 		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.BalanceService.RequestsQueue.Timeout)*time.Second)
-		_, err := api_gateway.balance_requests_queue.Ping(timeout_context).Result()
+		_, err := balance_requests_queue.Ping(timeout_context).Result()
 		if err != nil {
 			cancel()
 			return err
 		}
 		cancel()
+
+		api_gateway.http_multiplexer.balance_requests_queue = balance_requests_queue
 	}
 
 	{
 		// Prepare balance responses queue
-		api_gateway.balance_responses_queue = redis.NewClient(api_gateway.config.BalanceService.ResponsesQueue.GetRedisOptions())
+		balance_responses_queue := redis.NewClient(api_gateway.config.BalanceService.ResponsesQueue.GetRedisOptions())
 
 		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.BalanceService.ResponsesQueue.Timeout)*time.Second)
-		_, err := api_gateway.balance_responses_queue.Ping(timeout_context).Result()
+		_, err := balance_responses_queue.Ping(timeout_context).Result()
 		if err != nil {
 			cancel()
 			return err
 		}
 		cancel()
+
+		api_gateway.http_multiplexer.balance_responses_queue = balance_responses_queue
 	}
 
 	{
 		// Prepare transaction history requests queue
-		api_gateway.transaction_history_requests_queue = redis.NewClient(api_gateway.config.TransactionHistoryService.RequestsQueue.GetRedisOptions())
+		transaction_history_requests_queue := redis.NewClient(api_gateway.config.TransactionHistoryService.RequestsQueue.GetRedisOptions())
 
 		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.TransactionHistoryService.RequestsQueue.Timeout)*time.Second)
-		_, err := api_gateway.transaction_history_requests_queue.Ping(timeout_context).Result()
+		_, err := transaction_history_requests_queue.Ping(timeout_context).Result()
 		if err != nil {
 			cancel()
 			return err
 		}
 		cancel()
+
+		api_gateway.http_multiplexer.transaction_history_requests_queue = transaction_history_requests_queue
 	}
 
 	{
 		// Prepare transaction history responses queue
-		api_gateway.transaction_history_responses_queue = redis.NewClient(api_gateway.config.TransactionHistoryService.ResponsesQueue.GetRedisOptions())
+		transaction_history_responses_queue := redis.NewClient(api_gateway.config.TransactionHistoryService.ResponsesQueue.GetRedisOptions())
 
 		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.TransactionHistoryService.ResponsesQueue.Timeout)*time.Second)
-		_, err := api_gateway.transaction_history_responses_queue.Ping(timeout_context).Result()
+		_, err := transaction_history_responses_queue.Ping(timeout_context).Result()
 		if err != nil {
 			cancel()
 			return err
 		}
 		cancel()
+
+		api_gateway.http_multiplexer.transaction_history_responses_queue = transaction_history_responses_queue
 	}
 
 	return nil
