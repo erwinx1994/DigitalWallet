@@ -243,7 +243,9 @@ The following commands can be used to update the dependent libraries and compile
 
 ## Running unit tests
 
-The unit tests rely on having an actual instance of both Redis and PostgreSQL to work. You need to ensure that they are set up and cleared correctly as described below.
+The unit tests were not written to achieve 100% code coverage. They were written to test that the core functionality of each backend module works. 
+
+The unit tests rely on having an actual instance of both Redis and PostgreSQL to work. You need to ensure that they are set up correctly as described below.
 
 Additional Redis message queues used for unit testing are described below.
 
@@ -286,4 +288,26 @@ Additional tables need to be created in the PostgreSQL database for unit testing
 
 The following commands can be used to run the unit tests for each package.
 
-    
+    cd ./api_client
+    go test ./...
+
+    cd ./api_gateway
+    go test ./...
+
+    cd ./balance_service
+    go test ./...
+
+    cd ./deposit_service
+    go test ./...
+
+    cd ./shared
+    go test ./...
+
+    cd ./transaction_history_service
+    go test ./...
+
+    cd ./transfer_service
+    go test ./...
+
+    cd ./withdraw_service
+    go test ./...
