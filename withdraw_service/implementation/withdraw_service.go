@@ -2,6 +2,7 @@ package implementation
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"log"
 	"shared/messages"
@@ -78,6 +79,21 @@ func (service *WithdrawService) async_run() {
 	if err != nil {
 		log.Fatal("Could not connect to Redis server: ", err)
 	}
+	log.Println("Created clients for Redis message queues.")
+
+	// Open connection to PostgreSQL database
+	db, err := sql.Open("postgres", service.config.WalletDatabase.GetConnectionString())
+	if err != nil {
+		log.Fatal("Could not create PostgreSQL database object.", err)
+	}
+	defer db.Close()
+	err = db.Ping()
+	if err != nil {
+		log.Fatal("Could not connect to PostgreSQL database.", err)
+	}
+	log.Println("Connected to PostgreSQL database.")
+
+	// Prepare commonly used SQL statements
 
 	// Service continues running until terminated by user
 	for service.is_alive.Load() {
@@ -97,10 +113,8 @@ func (service *WithdrawService) async_run() {
 		// string_slice[1] gives the data retrieved from the queue
 
 		// Deserialise JSON data received
-		redis_message := messages.RedisMessage{
-			Body: messages.GET_Balance{},
-		}
-		err = json.Unmarshal([]byte(string_slice[1]), &redis_message)
+		request_message := messages.POST_Withdraw{}
+		err = json.Unmarshal([]byte(string_slice[1]), &request_message)
 		if err != nil {
 			log.Println("Failed to deserialise JSON message. Should not happen in production.")
 			// In practice, we will need an error notification system. Building an error
@@ -108,11 +122,22 @@ func (service *WithdrawService) async_run() {
 			continue
 		}
 
+		// Verify that the correct message was received
+		if request_message.Header.Action != messages.Action_withdraw {
+			log.Println("Incorrect message received.")
+			continue
+		}
+
 		// Query PostgreSQL database
 
 		// Prepare response
-		redis_message.Body = responses.Withdraw{}
-		bytes_to_send, err := json.Marshal(redis_message)
+		response_message := responses.Withdraw{
+			Header: responses.Header{
+				MessageID: request_message.Header.MessageID,
+				Action:    request_message.Header.Action,
+			},
+		}
+		bytes_to_send, err := json.Marshal(response_message)
 		if err != nil {
 			log.Println("Failed to serialise response message. Should not happen in production.")
 			// In practice, we will need an error notification system. I have skipped
