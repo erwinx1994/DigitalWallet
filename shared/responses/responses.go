@@ -11,31 +11,35 @@ type Header struct {
 	Action    int   `json:"action"`
 }
 type Deposit struct {
-	Header     Header `json:"header"`
-	Status     int    `json:"status,omitempty"`
-	Currency   string `json:"currency,omitempty"`
-	NewBalance string `json:"new_balance,omitempty"`
+	Header       Header `json:"header"`
+	Status       int    `json:"status,omitempty"`
+	ErrorMessage string `json:"error_message,omit_empty"`
+	Currency     string `json:"currency,omitempty"`
+	NewBalance   string `json:"new_balance,omitempty"`
 }
 
 type Withdraw struct {
-	Header     Header `json:"header"`
-	Status     int    `json:"status,omitempty"`
-	Currency   string `json:"currency,omitempty"`
-	NewBalance string `json:"new_balance,omitempty"`
+	Header       Header `json:"header"`
+	Status       int    `json:"status,omitempty"`
+	ErrorMessage string `json:"error_message,omit_empty"`
+	Currency     string `json:"currency,omitempty"`
+	NewBalance   string `json:"new_balance,omitempty"`
 }
 
 type Transfer struct {
-	Header     Header `json:"header"`
-	Status     int    `json:"status,omitempty"`
-	Currency   string `json:"currency,omitempty"`
-	NewBalance string `json:"new_balance,omitempty"`
+	Header       Header `json:"header"`
+	Status       int    `json:"status,omitempty"`
+	ErrorMessage string `json:"error_message,omit_empty"`
+	Currency     string `json:"currency,omitempty"`
+	NewBalance   string `json:"new_balance,omitempty"`
 }
 
 type Balance struct {
-	Header   Header `json:"header"`
-	Status   int    `json:"status,omitempty"`
-	Currency string `json:"currency,omitempty"`
-	Balance  string `json:"balance,omitempty"`
+	Header       Header `json:"header"`
+	Status       int    `json:"status,omitempty"`
+	ErrorMessage string `json:"error_message,omit_empty"`
+	Currency     string `json:"currency,omitempty"`
+	Balance      string `json:"balance,omitempty"`
 }
 
 type Transaction struct {
@@ -46,7 +50,8 @@ type Transaction struct {
 }
 
 type TransactionHistory struct {
-	Header  Header        `json:"header"`
-	Status  int           `json:"status,omitempty"`
-	History []Transaction `json:"history,omitempty"`
+	Header       Header        `json:"header"`
+	Status       int           `json:"status,omitempty"`
+	ErrorMessage string        `json:"error_message,omitempty"`
+	History      []Transaction `json:"history,omitempty"`
 }

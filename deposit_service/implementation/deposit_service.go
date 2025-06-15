@@ -92,13 +92,14 @@ func (service *DepositService) send_response(response_message *responses.Deposit
 	cancel()
 }
 
-func (service *DepositService) send_failed_response(request_message *messages.POST_Deposit) {
+func (service *DepositService) send_failed_response(message string, request_message *messages.POST_Deposit) {
 	response_message := responses.Deposit{
 		Header: responses.Header{
 			MessageID: request_message.Header.MessageID,
 			Action:    request_message.Header.Action,
 		},
-		Status: responses.Status_failed,
+		Status:       responses.Status_failed,
+		ErrorMessage: message,
 	}
 	service.send_response(&response_message)
 }
@@ -183,15 +184,14 @@ func (service *DepositService) async_run() {
 
 		// Verify that the correct message was received
 		if request_message.Header.Action != messages.Action_deposit {
-			log.Println("Incorrect message received.")
+			service.send_failed_response("Message received by wrong service", &request_message)
 			continue
 		}
 
 		// Very that request message is valid
 		deposit_amount, err := utilities.Convert_display_to_database_format(request_message.Amount)
 		if err != nil {
-			log.Println("Invalid amount.", err)
-			service.send_failed_response(&request_message)
+			service.send_failed_response("Amount specified was invalid", &request_message)
 			continue
 		}
 
@@ -199,8 +199,7 @@ func (service *DepositService) async_run() {
 		transaction_date_time := time.Now().UTC()
 		db_transaction, err := db.Begin()
 		if err != nil {
-			log.Println("Error creating transaction.")
-			service.send_failed_response(&request_message)
+			service.send_failed_response("Database error", &request_message)
 			continue
 		}
 
@@ -213,8 +212,7 @@ func (service *DepositService) async_run() {
 		if err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				db_transaction.Rollback()
-				log.Println("Error reading from PostgreSQL database: ", err)
-				service.send_failed_response(&request_message)
+				service.send_failed_response("Database error", &request_message)
 				continue
 			}
 		}
@@ -227,8 +225,7 @@ func (service *DepositService) async_run() {
 			_, err := tx_insert_transaction.Exec(request_message.WalletID, transaction_date_time, request_message.Currency, deposit_amount)
 			if err != nil {
 				db_transaction.Rollback()
-				log.Println("Database transaction failed.", err)
-				service.send_failed_response(&request_message)
+				service.send_failed_response("Database error", &request_message)
 				continue
 			}
 
@@ -238,8 +235,7 @@ func (service *DepositService) async_run() {
 			_, err = tx_insert_new_balance.Exec(request_message.WalletID, request_message.Currency, balance)
 			if err != nil {
 				db_transaction.Rollback()
-				log.Println("Database transaction failed.", err)
-				service.send_failed_response(&request_message)
+				service.send_failed_response("Database error", &request_message)
 				continue
 			}
 		} else {
@@ -253,8 +249,7 @@ func (service *DepositService) async_run() {
 				_, err := tx_insert_transaction.Exec(request_message.WalletID, transaction_date_time, request_message.Currency, deposit_amount)
 				if err != nil {
 					db_transaction.Rollback()
-					log.Println("Database transaction failed.", err)
-					service.send_failed_response(&request_message)
+					service.send_failed_response("Database error", &request_message)
 					continue
 				}
 
@@ -264,8 +259,7 @@ func (service *DepositService) async_run() {
 				_, err = tx_update_balance.Exec(balance, request_message.WalletID)
 				if err != nil {
 					db_transaction.Rollback()
-					log.Println("Database transaction failed.", err)
-					service.send_failed_response(&request_message)
+					service.send_failed_response("Database error", &request_message)
 					continue
 				}
 
@@ -273,8 +267,8 @@ func (service *DepositService) async_run() {
 				// Do not proceed with deposit if wallet already exists and its currency does
 				// not match with the currency of the deposit
 				db_transaction.Rollback()
-				log.Println("Mismatching wallet and deposit currencies", err)
-				service.send_failed_response(&request_message)
+				service.send_failed_response(
+					"Currency of deposit does not match currency of wallet", &request_message)
 				continue
 			}
 
@@ -284,8 +278,7 @@ func (service *DepositService) async_run() {
 		err = db_transaction.Commit()
 		if err != nil {
 			db_transaction.Rollback()
-			log.Println("Database transaction failed.", err)
-			service.send_failed_response(&request_message)
+			service.send_failed_response("Database error", &request_message)
 			continue
 		}
 

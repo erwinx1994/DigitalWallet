@@ -70,6 +70,40 @@ func (service *BalanceService) prepare_redis_clients() error {
 	return nil
 }
 
+func (service *BalanceService) send_response(response_message *responses.Balance) {
+	bytes_to_send, err := json.Marshal(response_message)
+	if err != nil {
+		log.Println("Failed to serialise response message. Should not happen in production.")
+		// In practice, we will need an error notification system. I have skipped
+		// building an error notification system due to time constraints.
+		return
+	}
+
+	// Put response into responses queue
+	timeout := time.Duration(service.config.ResponsesQueue.Timeout) * time.Second
+	queue_name := service.config.ResponsesQueue.QueueName
+	timeout_context, cancel := context.WithTimeout(service.background_context, timeout)
+	_, err = service.responses_queue.LPush(timeout_context, queue_name, bytes_to_send).Result()
+	if err != nil {
+		cancel()
+		log.Println("Failed to put response into responses queue.")
+		return
+	}
+	cancel()
+}
+
+func (service *BalanceService) send_failed_response(message string, request_message *messages.GET_Balance) {
+	response_message := responses.Balance{
+		Header: responses.Header{
+			MessageID: request_message.Header.MessageID,
+			Action:    request_message.Header.Action,
+		},
+		Status:       responses.Status_failed,
+		ErrorMessage: message,
+	}
+	service.send_response(&response_message)
+}
+
 func (service *BalanceService) async_run() {
 	defer func() {
 		service.waitgroup.Done()
@@ -132,7 +166,7 @@ func (service *BalanceService) async_run() {
 
 		// Verify that the correct message was received
 		if request_message.Header.Action != messages.Action_get_balance {
-			log.Println("Incorrect message received.")
+			service.send_failed_response("Message received by wrong service", &request_message)
 			continue
 		}
 
@@ -141,9 +175,12 @@ func (service *BalanceService) async_run() {
 		var balance int64 = 0
 		err = get_balance.QueryRow(request_message.WalletID).Scan(&currency, &balance)
 		if err != nil {
-			if !errors.Is(err, sql.ErrNoRows) {
-				log.Fatal("Error retrieving balance: ", err)
+			if errors.Is(err, sql.ErrNoRows) {
+				service.send_failed_response("Wallet does not exist", &request_message)
+			} else {
+				service.send_failed_response("Database error", &request_message)
 			}
+			continue
 		}
 
 		// Prepare response
@@ -152,36 +189,11 @@ func (service *BalanceService) async_run() {
 				MessageID: request_message.Header.MessageID,
 				Action:    request_message.Header.Action,
 			},
+			Status:   responses.Status_successful,
+			Currency: currency,
+			Balance:  utilities.Convert_database_to_display_format(balance),
 		}
-		if err == nil {
-			response_message.Status = responses.Status_successful
-			response_message.Currency = currency
-			response_message.Balance = utilities.Convert_database_to_display_format(balance)
-		} else {
-			response_message.Status = responses.Status_failed
-			response_message.Currency = ""
-			response_message.Balance = ""
-		}
-		bytes_to_send, err := json.Marshal(response_message)
-		if err != nil {
-			log.Println("Failed to serialise response message. Should not happen in production.")
-			// In practice, we will need an error notification system. I have skipped
-			// building an error notification system due to time constraints.
-			continue
-		}
-
-		// Put response into responses queue
-		timeout = time.Duration(service.config.ResponsesQueue.Timeout) * time.Second
-		queue_name = service.config.ResponsesQueue.QueueName
-		timeout_context, cancel = context.WithTimeout(service.background_context, timeout)
-		_, err = service.responses_queue.LPush(timeout_context, queue_name, bytes_to_send).Result()
-		if err != nil {
-			cancel()
-			log.Println("Failed to put response into responses queue.")
-			return
-		}
-		cancel()
-
+		service.send_response(&response_message)
 	}
 }
 

@@ -266,9 +266,10 @@ func Test_DepositService(t *testing.T) {
 				MessageID: request_message.Header.MessageID,
 				Action:    request_message.Header.Action,
 			},
-			Status:     responses.Status_failed,
-			Currency:   "",
-			NewBalance: "",
+			Status:       responses.Status_failed,
+			ErrorMessage: "Currency of deposit does not match currency of wallet",
+			Currency:     "",
+			NewBalance:   "",
 		}
 		if !reflect.DeepEqual(response_message, expected_response) {
 			t.Fatal("Expected: ", expected_response, ", Got: ", response_message)
