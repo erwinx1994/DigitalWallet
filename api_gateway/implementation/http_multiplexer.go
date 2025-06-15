@@ -127,12 +127,9 @@ func (mux *HTTPRequestMultiplexer) POST_Deposit(input *paths.MatchResult, writer
 
 	// Prepare redis message
 	body.WalletID = wallet_id
-	redis_message := messages.RedisMessage{
-		MessageID: mux.global_id.Add(1),
-		Action:    messages.Action_deposit,
-		Body:      body,
-	}
-	bytes, err = json.Marshal(redis_message)
+	body.Header.MessageID = mux.global_id.Add(1)
+	body.Header.Action = messages.Action_deposit
+	bytes, err = json.Marshal(body)
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
@@ -187,12 +184,9 @@ func (mux *HTTPRequestMultiplexer) POST_Withdrawal(input *paths.MatchResult, wri
 
 	// Prepare redis message
 	body.WalletID = wallet_id
-	redis_message := messages.RedisMessage{
-		MessageID: mux.global_id.Add(1),
-		Action:    messages.Action_withdraw,
-		Body:      body,
-	}
-	bytes, err = json.Marshal(redis_message)
+	body.Header.MessageID = mux.global_id.Add(1)
+	body.Header.Action = messages.Action_withdraw
+	bytes, err = json.Marshal(body)
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
@@ -245,12 +239,9 @@ func (mux *HTTPRequestMultiplexer) POST_Transfer(input *paths.MatchResult, write
 	}
 
 	// Prepare redis message
-	redis_message := messages.RedisMessage{
-		MessageID: mux.global_id.Add(1),
-		Action:    messages.Action_transfer,
-		Body:      body,
-	}
-	bytes, err = json.Marshal(redis_message)
+	body.Header.MessageID = mux.global_id.Add(1)
+	body.Header.Action = messages.Action_transfer
+	bytes, err = json.Marshal(body)
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
@@ -303,15 +294,14 @@ func (mux *HTTPRequestMultiplexer) GET_WalletBalance(input *paths.MatchResult, w
 	}
 
 	// Prepare redis message
-	body := messages.GET_Balance{
+	request_message := messages.GET_Balance{
+		Header: messages.Header{
+			MessageID: mux.global_id.Add(1),
+			Action:    messages.Action_get_balance,
+		},
 		WalletID: wallet_id,
 	}
-	redis_message := messages.RedisMessage{
-		MessageID: mux.global_id.Add(1),
-		Action:    messages.Action_get_balance,
-		Body:      body,
-	}
-	bytes, err := json.Marshal(redis_message)
+	bytes, err := json.Marshal(request_message)
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
@@ -354,17 +344,16 @@ func (mux *HTTPRequestMultiplexer) GET_TransactionHistory(input *paths.MatchResu
 	}
 
 	// Prepare redis message
-	body := messages.GET_TransactionHistory{
+	request_message := messages.GET_TransactionHistory{
+		Header: messages.Header{
+			MessageID: mux.global_id.Add(1),
+			Action:    messages.Action_get_transaction_history,
+		},
 		WalletID: wallet_id,
 		From:     from,
 		To:       to,
 	}
-	redis_message := messages.RedisMessage{
-		MessageID: mux.global_id.Add(1),
-		Action:    messages.Action_get_transaction_history,
-		Body:      body,
-	}
-	bytes, err := json.Marshal(redis_message)
+	bytes, err := json.Marshal(request_message)
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		return

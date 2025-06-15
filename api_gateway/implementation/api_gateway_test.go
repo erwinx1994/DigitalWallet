@@ -85,7 +85,7 @@ func Test_APIGateway(t *testing.T) {
 		}
 		response.Body.Close()
 
-		expected_data := []byte("{\"amount\":\"100.20\",\"currency\":\"SGD\"}")
+		expected_data := []byte("{\"header\":{\"id\":0,\"action\":0},\"amount\":\"100.20\",\"currency\":\"SGD\"}")
 		if !reflect.DeepEqual(bytes, expected_data) {
 			t.Fatal("Expected: ", string(expected_data), ", Got: ", string(bytes))
 		}

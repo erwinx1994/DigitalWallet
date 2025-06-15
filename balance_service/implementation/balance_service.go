@@ -97,7 +97,7 @@ func (service *BalanceService) async_run() {
 	log.Println("Connected to PostgreSQL database.")
 
 	// Prepare commonly used SQL statements
-	get_balance, err := db.Prepare("select currency, balance from " + service.config.WalletDatabase.BalanceTable + " where wallet_id='$1'")
+	get_balance, err := db.Prepare("select currency, balance from " + service.config.WalletDatabase.BalanceTable + " where wallet_id=$1")
 	if err != nil {
 		log.Fatal("Unable to prepare SQL statement.")
 	}
@@ -121,22 +121,25 @@ func (service *BalanceService) async_run() {
 		// string_slice[1] gives the data retrieved from the queue
 
 		// Deserialise JSON data received
-		redis_message := messages.RedisMessage{
-			Body: messages.GET_Balance{},
-		}
-		err = json.Unmarshal([]byte(string_slice[1]), &redis_message)
+		request_message := messages.GET_Balance{}
+		err = json.Unmarshal([]byte(string_slice[1]), &request_message)
 		if err != nil {
 			log.Println("Failed to deserialise JSON message. Should not happen in production.")
 			// In practice, we will need an error notification system. I have skipped
 			// building an error notification system due to time constraints.
 			continue
 		}
-		body := redis_message.Body.(messages.GET_Balance)
+
+		// Verify that the correct message was received
+		if request_message.Header.Action != messages.Action_get_balance {
+			log.Println("Incorrect message received.")
+			continue
+		}
 
 		// Query PostgreSQL database. Assume inputs are correct.
 		var currency string = ""
 		var balance int64 = 0
-		err = get_balance.QueryRow(body.WalletID).Scan(&currency, &balance)
+		err = get_balance.QueryRow(request_message.WalletID).Scan(&currency, &balance)
 		if err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				log.Fatal("Error retrieving balance: ", err)
@@ -144,20 +147,22 @@ func (service *BalanceService) async_run() {
 		}
 
 		// Prepare response
-		if err == nil {
-			redis_message.Body = responses.Balance{
-				Status:   responses.Status_successful,
-				Currency: currency,
-				Balance:  utilities.Convert_database_to_display_format(balance),
-			}
-		} else {
-			redis_message.Body = responses.Balance{
-				Status:   responses.Status_failed,
-				Currency: currency,
-				Balance:  "",
-			}
+		response_message := responses.Balance{
+			Header: responses.Header{
+				MessageID: request_message.Header.MessageID,
+				Action:    request_message.Header.Action,
+			},
 		}
-		bytes_to_send, err := json.Marshal(redis_message)
+		if err == nil {
+			response_message.Status = responses.Status_successful
+			response_message.Currency = currency
+			response_message.Balance = utilities.Convert_database_to_display_format(balance)
+		} else {
+			response_message.Status = responses.Status_failed
+			response_message.Currency = ""
+			response_message.Balance = ""
+		}
+		bytes_to_send, err := json.Marshal(response_message)
 		if err != nil {
 			log.Println("Failed to serialise response message. Should not happen in production.")
 			// In practice, we will need an error notification system. I have skipped

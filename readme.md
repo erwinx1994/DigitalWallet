@@ -243,6 +243,31 @@ The following commands can be used to update the dependent libraries and compile
 
 ## Running unit tests
 
+The unit tests rely on having an actual instance of both Redis and PostgreSQL to work. You need to ensure that they are set up and cleared correctly as described below.
 
+Additional Redis message queues used for unit testing are described below.
 
+    deposit_requests_queue_test
+    deposit_responses_queue_test
 
+    withdrawal_requests_queue_test
+    withdrawal_responses_queue_test
+
+    transfer_requests_queue_test
+    transfer_responses_queue_test
+
+    balance_requests_queue_test
+    balance_responses_queue_test
+
+    transaction_history_requests_queue_test
+    transaction_history_responses_queue_test
+
+Additional tables need to be created in the PostgreSQL database for unit testing. They are created under the **test_wallet** schema.
+
+    create schema test_wallet;
+    create table postgres.test_wallet.balances(wallet_id text, currency character(3), balance bigint);
+    create table postgres.test_wallet.transactions(wallet_id text, date_and_time timestamptz, currency character(3), amount bigint);
+
+The following commands can be used to run the unit tests for each package.
+
+    
