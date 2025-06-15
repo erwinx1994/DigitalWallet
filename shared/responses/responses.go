@@ -6,6 +6,12 @@ const (
 	Status_failed     int = 2
 )
 
+const (
+	Transaction_type_unknown  string = "U"
+	Transaction_type_deposit  string = "D"
+	Transaction_type_withdraw string = "W"
+)
+
 type Header struct {
 	MessageID int64 `json:"id"`
 	Action    int   `json:"action"`
@@ -44,7 +50,7 @@ type Balance struct {
 
 type Transaction struct {
 	Date     string `json:"date,omitempty"`
-	Type     int    `json:"type,omitempty"`
+	Type     string `json:"type,omitempty"`
 	Currency string `json:"currency,omitempty"`
 	Amount   string `json:"amount,omitempty"`
 }
