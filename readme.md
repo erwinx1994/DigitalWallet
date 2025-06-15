@@ -90,13 +90,45 @@ Firewalls in your test environment may need to be disabled for the Digital Walle
 
 ## Set up of PostgreSQL to store wallet information and transaction histories 
 
-PostgreSQL must be installed and set up correctly on your test computer before running this program.
+PostgreSQL must be installed and set up correctly on your test computer before running this program. PostgreSQL for Windows can be downloaded here. Instructions to set up the database for other operating systems are not covered due to time constraints.
+
+    https://www.postgresql.org/download/windows/
+
+Once downloaded, install PostgreSQL database with the default installation settings. PostgreSQL should be installed in the following directory by default.
+
+    C:\Program Files\PostgreSQL\17
+
+Once installed, this directory will need to be added to the PATH environment variable in Windows such that the commands for running and managing PostgreSQL databases can be accessed from the command prompt.
+
+    C:\Program Files\PostgreSQL\17\bin
+
+Search for **environment** in the start menu. Click on **Edit the system environment variables**.
+
+![](/images/add_postgres_db_to_path_1.png)
+
+The **Advanced** tab of the **System Properties** window will show. Click on **Environment Variables...**.
+
+![](/images/add_postgres_db_to_path_2.png)
+
+The **Environment Variables** window will show. Under **System Variables** click on **PATH** then click **Edit**.
+
+![](/images/add_postgres_db_to_path_3.png)
+
+The **Edit Environment Variable** window will show. Click on **New** then copy **C:\Program Files\PostgreSQL\17\bin** into the new row that appears.
+
+![](/images/add_postgres_db_to_path_4.png)
+
+Click **Ok** to save and close the remaining windows.
 
 ## Set up of Redis as a message queueing service
 
-Redis is used as an in-memory message queue for passing messages from one backend application to another. It must be installed and set up correctly on your test computer before starting the backend applications. Instructions to install Redis Open Source on WSL for Windows can be found here.
+Redis is used as an in-memory message queue for passing messages from one backend application to another. It must be installed and set up correctly on your test computer before starting the backend applications. Instructions to install Redis Open Source on Windows Subsystem for Linux (WSL) for Windows can be found here.
 
     https://redis.io/docs/latest/operate/oss_and_stack/install/archive/install-redis/install-redis-on-windows/
+
+If you don't already have WSL, instructions to install it on your computer can be found here.
+
+    https://learn.microsoft.com/en-us/windows/wsl/install
 
 Once installed, run the following command to start a Redis server on WSL at port 1640 with the **default** username and empty password.
 
