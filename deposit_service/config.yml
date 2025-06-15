@@ -13,3 +13,12 @@ redis_responses_queue:
   password:                       ""
   queue_name:                     "deposit_responses_queue"
   timeout:                        5 # s
+
+postgresql_wallet_database:
+  host:                           "localhost"
+  port:                           "5432"
+  username:                       "postgres"
+  password:                       "postgres"
+  database:                       "postgres"
+  balance_table:                  "postgres.wallet.balances"
+  transactions_table:             "postgres.wallet.transactions"

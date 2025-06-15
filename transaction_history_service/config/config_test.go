@@ -2,6 +2,7 @@ package config
 
 import (
 	"reflect"
+	shared_config "shared/config"
 	"testing"
 )
 
@@ -14,21 +15,30 @@ func Test_LoadConfig(t *testing.T) {
 	}
 
 	expected_config := Config{
-		RequestsQueue: RedisMessageQueue{
+		RequestsQueue: shared_config.RedisMessageQueue{
 			Host:      "localhost",
 			Port:      "1640",
 			Username:  "default",
 			Password:  "",
-			QueueName: "balance_requests_queue",
+			QueueName: "transaction_history_requests_queue",
 			Timeout:   5,
 		},
-		ResponsesQueue: RedisMessageQueue{
+		ResponsesQueue: shared_config.RedisMessageQueue{
 			Host:      "localhost",
 			Port:      "1640",
 			Username:  "default",
 			Password:  "",
-			QueueName: "balance_responses_queue",
+			QueueName: "transaction_history_responses_queue",
 			Timeout:   5,
+		},
+		WalletDatabase: shared_config.PostgreSQLDatabase{
+			Host:              "localhost",
+			Port:              "5432",
+			Username:          "postgres",
+			Password:          "postgres",
+			Database:          "postgres",
+			BalanceTable:      "postgres.wallet.balances",
+			TransactionsTable: "postgres.wallet.transactions",
 		},
 	}
 	if !reflect.DeepEqual(*config, expected_config) {
