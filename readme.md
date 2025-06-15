@@ -132,14 +132,27 @@ PostgreSQL should automatically be started up after installation. It it isn't al
     pg_ctl start -D "database_cluster_directory"
     pg_ctl start -D "C:\Program Files\PostgreSQL\17\data"
 
-Connect to the PostgreSQL database using the following command. There is already a default database automatically created during installation called **postgres**.
+Connect to the PostgreSQL database using the following command from the command prompt. There is already a default database automatically created during installation called **postgres**.
 
     psql -U username -d database_name
     psql -U postgres -d postgres
 
-Create the following tables.
+Create a schema called **wallet** in the **postgres** database.
 
+    create schema wallet;
 
+Create a new **balances** table in the **wallet** schema in the **postgres** database. **wallet_id** can potentially consist of any alphanumeric character of variable length. Currencies can usually be represented using 3 characters (SGD, HKD, USD, GBP, etc.). To make our system as future proof as possible, the largest available integer representation provided by PostgreSQL is used to represent the balance of a wallet. Money is usally not represented using floating point numbers due to precision losses.
+
+    create table postgres.wallet.balances(wallet_id text, currency character(3), balance bigint);
+
+Create a new **transactions** table in the **wallet** schema in the **postgres** database. The exact date and time of each transaction is clearly recorded with its time zone. This avoids confusing timezone conversions later on if the time zones were not specified. A deposit is recorded with a positive amount. A withdrawal is recorded as a negative amount. This allows the balance of a wallet to be easily recomputed using PostgreSQL's SUM() function later on.
+
+    create table postgres.wallet.transactions(wallet_id text, date_and_time timestamptz, currency character(3), amount bigint);
+
+Use the command below to verify that the **postgres.wallet.balances** and **postgres.wallet.transactions** tables were created properly.
+
+    \dt database_name.schema_name.*
+    \dt postgres.wallet.*
 
 ## Set up of Redis as a message queueing service
 
