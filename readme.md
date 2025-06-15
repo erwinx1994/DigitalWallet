@@ -101,7 +101,7 @@ Once downloaded, install PostgreSQL database with the default installation setti
 The installation wizard may also ask you to create a user account for managing the database. Take note of them. 
 
     Superuser: postgres
-    Password: -not-provided-
+    Password: postgres
     Port number: 5432
     Locale: Default
 
@@ -194,6 +194,7 @@ The names of all message queues used by the backend applications are summarised 
 ## Library dependencies
 
     go get github.com/redis/go-redis/v9
+    go get github.com/lib/pq
 
 ## How to compile the code
 

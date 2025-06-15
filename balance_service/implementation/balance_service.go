@@ -3,14 +3,18 @@ package implementation
 import (
 	"balance_service/config"
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"shared/messages"
 	"shared/responses"
+	"shared/utilities"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -78,6 +82,26 @@ func (service *BalanceService) async_run() {
 	if err != nil {
 		log.Fatal("Could not connect to Redis server: ", err)
 	}
+	log.Println("Created clients for Redis message queues.")
+
+	// Open connection to PostgreSQL database
+	db, err := sql.Open("postgres", service.config.WalletDatabase.GetConnectionString())
+	if err != nil {
+		log.Fatal("Could not create PostgreSQL database object.", err)
+	}
+	defer db.Close()
+	err = db.Ping()
+	if err != nil {
+		log.Fatal("Could not connect to PostgreSQL database.", err)
+	}
+	log.Println("Connected to PostgreSQL database.")
+
+	// Prepare commonly used SQL statements
+	get_balance, err := db.Prepare("select currency, balance from " + service.config.WalletDatabase.BalanceTable + " where wallet_id='$1'")
+	if err != nil {
+		log.Fatal("Unable to prepare SQL statement.")
+	}
+	defer get_balance.Close()
 
 	// Service continues running until terminated by user
 	for service.is_alive.Load() {
@@ -89,7 +113,6 @@ func (service *BalanceService) async_run() {
 		string_slice, err := service.requests_queue.BRPop(timeout_context, timeout, queue_name).Result()
 		if err != nil {
 			cancel()
-			log.Println("Failed to receive messages from requests queue.")
 			continue
 		}
 		cancel()
@@ -108,11 +131,32 @@ func (service *BalanceService) async_run() {
 			// building an error notification system due to time constraints.
 			continue
 		}
+		body := redis_message.Body.(messages.GET_Balance)
 
-		// Query PostgreSQL database
+		// Query PostgreSQL database. Assume inputs are correct.
+		var currency string = ""
+		var balance int64 = 0
+		err = get_balance.QueryRow(body.WalletID).Scan(&currency, &balance)
+		if err != nil {
+			if !errors.Is(err, sql.ErrNoRows) {
+				log.Fatal("Error retrieving balance: ", err)
+			}
+		}
 
 		// Prepare response
-		redis_message.Body = responses.Balance{}
+		if err == nil {
+			redis_message.Body = responses.Balance{
+				Status:   responses.Status_successful,
+				Currency: currency,
+				Balance:  utilities.Convert_database_to_display_format(balance),
+			}
+		} else {
+			redis_message.Body = responses.Balance{
+				Status:   responses.Status_failed,
+				Currency: currency,
+				Balance:  "",
+			}
+		}
 		bytes_to_send, err := json.Marshal(redis_message)
 		if err != nil {
 			log.Println("Failed to serialise response message. Should not happen in production.")

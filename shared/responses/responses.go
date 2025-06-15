@@ -8,22 +8,26 @@ const (
 
 type Deposit struct {
 	Status     int    `json:"status,omitempty"`
+	Currency   string `json:"currency,omitempty"`
 	NewBalance string `json:"new_balance,omitempty"`
 }
 
 type Withdraw struct {
 	Status     int    `json:"status,omitempty"`
+	Currency   string `json:"currency,omitempty"`
 	NewBalance string `json:"new_balance,omitempty"`
 }
 
 type Transfer struct {
 	Status     int    `json:"status,omitempty"`
+	Currency   string `json:"currency,omitempty"`
 	NewBalance string `json:"new_balance,omitempty"`
 }
 
 type Balance struct {
-	Status  int    `json:"status,omitempty"`
-	Balance string `json:"balance,omitempty"`
+	Status   int    `json:"status,omitempty"`
+	Currency string `json:"currency,omitempty"`
+	Balance  string `json:"balance,omitempty"`
 }
 
 type Transaction struct {
