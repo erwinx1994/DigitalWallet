@@ -8,6 +8,7 @@ import (
 	"log"
 	"shared/messages"
 	"shared/responses"
+	"shared/utilities"
 	"testing"
 	"time"
 
@@ -35,8 +36,8 @@ func Test_BalanceService(t *testing.T) {
 	// Modify the table and message queue names
 	config.RequestsQueue.QueueName = "balance_requests_queue_test"
 	config.ResponsesQueue.QueueName = "balance_responses_queue_test"
-	config.WalletDatabase.BalanceTable = "postgres.test_wallet.balances"
-	config.WalletDatabase.TransactionsTable = "postgres.test_wallet.transactions"
+	config.WalletDatabase.BalanceTable = "postgres.test_balance_service.balances"
+	config.WalletDatabase.TransactionsTable = "postgres.test_balance_service.transactions"
 
 	// Start running balance service
 	service := CreateBalanceService(config)
@@ -139,18 +140,15 @@ func Test_BalanceService(t *testing.T) {
 	if response_message.Header.Action != request_message.Header.Action {
 		t.Error("Expected: ", request_message.Header.Action, ", Got: ", response_message.Header.Action)
 	}
-
-	// Log responses
-	message := ""
-	switch response_message.Status {
-	case responses.Status_unknown:
-		message += "Unknown response"
-	case responses.Status_successful:
-		message += "Successful balance request"
-	case responses.Status_failed:
-		message += "Failed balance request"
+	if response_message.Status != responses.Status_successful {
+		t.Error("Expected successful request.")
 	}
-	message += ":" + response_message.Currency + " " + response_message.Balance
-	t.Log(message)
+	if response_message.Currency != currency {
+		t.Error("Expected: ", currency, ", Got: ", response_message.Currency)
+	}
+	expected_balance := utilities.Convert_database_to_display_format(balance)
+	if response_message.Balance != expected_balance {
+		t.Error("Expected: ", expected_balance, ", Got: ", response_message.Balance)
+	}
 
 }

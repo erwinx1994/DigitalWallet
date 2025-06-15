@@ -264,9 +264,25 @@ Additional Redis message queues used for unit testing are described below.
 
 Additional tables need to be created in the PostgreSQL database for unit testing. They are created under the **test_wallet** schema.
 
-    create schema test_wallet;
-    create table postgres.test_wallet.balances(wallet_id text, currency character(3), balance bigint);
-    create table postgres.test_wallet.transactions(wallet_id text, date_and_time timestamptz, currency character(3), amount bigint);
+    create schema test_balance_service;
+    create table postgres.test_balance_service.balances(wallet_id text, currency character(3), balance bigint);
+    create table postgres.test_balance_service.transactions(wallet_id text, date_and_time timestamptz, currency character(3), amount bigint);
+
+    create schema test_deposit_service;
+    create table postgres.test_deposit_service.balances(wallet_id text, currency character(3), balance bigint);
+    create table postgres.test_deposit_service.transactions(wallet_id text, date_and_time timestamptz, currency character(3), amount bigint);
+
+    create schema test_transaction_history_service;
+    create table postgres.test_transaction_history_service.balances(wallet_id text, currency character(3), balance bigint);
+    create table postgres.test_transaction_history_service.transactions(wallet_id text, date_and_time timestamptz, currency character(3), amount bigint);
+
+    create schema test_transfer_service;
+    create table postgres.test_transfer_service.balances(wallet_id text, currency character(3), balance bigint);
+    create table postgres.test_transfer_service.transactions(wallet_id text, date_and_time timestamptz, currency character(3), amount bigint);
+
+    create schema test_withdraw_service;
+    create table postgres.test_withdraw_service.balances(wallet_id text, currency character(3), balance bigint);
+    create table postgres.test_withdraw_service.transactions(wallet_id text, date_and_time timestamptz, currency character(3), amount bigint);
 
 The following commands can be used to run the unit tests for each package.
 
