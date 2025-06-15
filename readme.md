@@ -98,6 +98,13 @@ Once downloaded, install PostgreSQL database with the default installation setti
 
     C:\Program Files\PostgreSQL\17
 
+The installation wizard may also ask you to create a user account for managing the database. Take note of them. 
+
+    Superuser: postgres
+    Password: -not-provided-
+    Port number: 5432
+    Locale: Default
+
 Once installed, this directory will need to be added to the PATH environment variable in Windows such that the commands for running and managing PostgreSQL databases can be accessed from the command prompt.
 
     C:\Program Files\PostgreSQL\17\bin
@@ -119,6 +126,20 @@ The **Edit Environment Variable** window will show. Click on **New** then copy *
 ![](/images/add_postgres_db_to_path_4.png)
 
 Click **Ok** to save and close the remaining windows.
+
+PostgreSQL should automatically be started up after installation. It it isn't already started up, you can use the following command to do so.
+
+    pg_ctl start -D "database_cluster_directory"
+    pg_ctl start -D "C:\Program Files\PostgreSQL\17\data"
+
+Connect to the PostgreSQL database using the following command. There is already a default database automatically created during installation called **postgres**.
+
+    psql -U username -d database_name
+    psql -U postgres -d postgres
+
+Create the following tables.
+
+
 
 ## Set up of Redis as a message queueing service
 
