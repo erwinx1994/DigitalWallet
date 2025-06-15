@@ -204,7 +204,7 @@ func (service *DepositService) async_run() {
 			continue
 		}
 
-		// 1. Check if wallet already exists and determine its currency. Return an error
+		// Check if wallet already exists and determine its currency. Return an error
 		// if the currency of the wallet does not match the deposit.
 		var currency string = ""
 		var balance int64 = 0
