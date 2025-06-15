@@ -235,6 +235,7 @@ func (service *TransferService) async_run() {
 		// Otherwise return an error.
 		transfer_amount, err := utilities.Convert_display_to_database_format(request_message.Amount)
 		if err != nil {
+			db_transaction.Rollback()
 			service.send_failed_response("Amount specified was invalid", &request_message)
 			continue
 		}
