@@ -2,11 +2,28 @@ package implementation
 
 import (
 	"api_client/config"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"shared/responses"
 	"time"
 )
+
+func ConvertToString(status int) string {
+	result := ""
+	switch status {
+	case responses.Status_unknown:
+		result = "Unknown"
+	case responses.Status_successful:
+		result = "Successful"
+	case responses.Status_failed:
+		result = "Failed"
+	}
+	return result
+}
 
 type APIClient struct {
 	config *config.Config
@@ -101,28 +118,120 @@ func (api_client *APIClient) get_wallet_balance() {
 	bytes := make([]byte, response.ContentLength)
 	_, err = response.Body.Read(bytes)
 	if err != nil {
-		fmt.Println("Error reading response: ", err.Error())
+		if !errors.Is(err, io.EOF) {
+			fmt.Println("Error reading response: ", err.Error())
+			return
+		}
+	}
+	body := responses.Balance{}
+	err = json.Unmarshal(bytes, &body)
+	if err != nil {
+		fmt.Println("Error parsing JSON response.")
 		return
 	}
 
 	// Print result to console
-	fmt.Println("HTTP GET response status: ", response.Status)
-	fmt.Println(string(bytes))
+	fmt.Println("Request status: ", ConvertToString(body.Status))
+	switch body.Status {
+	case responses.Status_successful:
+		fmt.Println("New balance: ", body.Currency, " ", body.Balance)
+	case responses.Status_failed:
+		fmt.Println("Error message: ", body.ErrorMessage)
+	case responses.Status_unknown:
+	}
+
 }
 
 func (api_client *APIClient) get_transaction_history() {
 
+	// api_client get_transaction_history <wallet_id> <start_date> <end_date>
+	// GET /wallets/{wallet_id}/transaction_history?from=YYYYMMDD&to=YYYYMMDD
+
 	// Verify that inputs are correct
-	if len(os.Args) != number_of_arguments_get_transaction_history {
+	if len(os.Args) < 3 {
 		fmt.Println("Incorrect number of arguments for get_transaction_history command.")
 		return
 	}
 
-	// Send request to server
+	if len(os.Args[2]) == 0 {
+		fmt.Println("Please enter a wallet ID.")
+		fmt.Println()
+		fmt.Println("api_client get_balance <wallet_id>")
+		return
+	}
 
-	// Wait for response from server
+	// Could do simple argument checking here. But due to lack of time, error checking
+	// is left to the transaction history service.
+	var start_date string = ""
+	if len(os.Args) >= 4 && len(os.Args[3]) > 0 {
+		start_date = os.Args[3]
+	}
+
+	var end_date string = ""
+	if len(os.Args) >= 5 && len(os.Args[4]) > 0 {
+		end_date = os.Args[4]
+	}
+
+	// Prepare GET request
+	http_client := http.Client{
+		Timeout: time.Duration(api_client.config.RequestTimeout) * time.Second,
+	}
+	wallet_id := os.Args[2]
+	base_url := api_client.config.Server.GetURL()
+	full_url := base_url + "/wallets/{" + wallet_id + "}/transaction_history" //
+	started_query_string := false
+	if len(start_date) > 0 {
+		full_url += "?from=" + start_date
+		started_query_string = true
+	}
+	if len(end_date) > 0 {
+		if started_query_string {
+			full_url += "&to=" + end_date
+		} else {
+			full_url += "?to=" + end_date
+		}
+		started_query_string = true
+	}
+	response, err := http_client.Get(full_url)
+	if err != nil {
+		fmt.Println("HTTP error occurred: ", err.Error())
+		return
+	}
+
+	// Parse result
+	bytes := make([]byte, response.ContentLength)
+	_, err = response.Body.Read(bytes)
+	if err != nil {
+		if !errors.Is(err, io.EOF) {
+			fmt.Println("Error reading response: ", err.Error())
+			return
+		}
+	}
+	fmt.Println(string(bytes))
+	body := responses.TransactionHistory{}
+	err = json.Unmarshal(bytes, &body)
+	if err != nil {
+		fmt.Println("Error parsing JSON response. ", string(bytes))
+		return
+	}
 
 	// Print result to console
+	fmt.Println("Request status: ", ConvertToString(body.Status))
+	switch body.Status {
+	case responses.Status_successful:
+		if len(body.History) == 0 {
+			fmt.Println("No transactions found")
+		} else {
+			fmt.Println("Transaction history")
+			fmt.Println("Date (YYYYMMDD), Type (D/W), Currency, Amount")
+			for _, row := range body.History {
+				fmt.Println(row.Date, ", ", row.Type, ", ", row.Currency, ", ", row.Amount)
+			}
+		}
+	case responses.Status_failed:
+		fmt.Println("Error message: ", body.ErrorMessage)
+	case responses.Status_unknown:
+	}
 
 }
 

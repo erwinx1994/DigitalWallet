@@ -31,7 +31,7 @@ func PrintHelpMenu() {
 	fmt.Println("\tapi_client get_balance <wallet_id>")
 	fmt.Println()
 
-	fmt.Println("This command allows you to get the transaction history of the specified wallet from a start date to end date, inclusive.")
+	fmt.Println("This command allows you to get the transaction history of the specified wallet from a start date to end date, inclusive. The start and end dates are interpreted in UTC time at midnight 00:00:00.")
 	fmt.Println()
 
 	fmt.Println("\tapi_client get_transaction_history <wallet_id> <start_date> <end_date>")
