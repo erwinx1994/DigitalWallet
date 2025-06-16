@@ -207,7 +207,6 @@ func (api_client *APIClient) get_transaction_history() {
 			return
 		}
 	}
-	fmt.Println(string(bytes))
 	body := responses.TransactionHistory{}
 	err = json.Unmarshal(bytes, &body)
 	if err != nil {
