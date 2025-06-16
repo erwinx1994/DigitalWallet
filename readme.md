@@ -188,10 +188,10 @@ The root directory of this repository does not contain a project that can be com
 What is contained within each subfolder is described below.
 
     ./api_client
-    Project for api_client application. Can be compiled and executed.
+    Project for api_client application. Can be compiled and executed. 
 
     ./api_gateway
-    Project for api_gateway application. Can be compiled and executed.
+    Project for api_gateway application. Can be compiled and executed. 
 
     ./balance_service
     Project for balance service which retrieves the balance of a wallet from the PostgreSQL database. It can be compiled and executed.
@@ -217,9 +217,15 @@ What is contained within each subfolder is described below.
     ./withdraw_service
     Project for withdraw service which updates the PostgreSQL database when withdrawing money from a wallet.
 
+The flow of data in the API gateway can be difficult to understand. A system design diagram of the inner workings of the API gateway is provided here. 
+
+[./docs/System design diagram of API gateway.pdf](./docs/System%20design%20diagram%20of%20API%20gateway.pdf)
+
+The other applications are straight forward processes with a single thread. They do not need to be explained with a system design diagram. The single thread in the balance service, deposit service, transaction history service, transfer service and withdraw service simply gets the next request message from the input queue, updates or reads the database and puts its response into the output queue.
+
 Each project for an executable service contains a **config** subdirectory. This is where code for its configuration file is managed. The inner workings of each executable service is placed in the **implementation** subdirectory. There may also be other subfolders for each executable service that contains code that are commonly reused.
 
-If you are unsure of how the applications relate to each other, refer to the simplified system design diagram!
+If you are unsure of how the applications relate to each other, refer to the system design diagrams!
 
 ## Set up of environment
 
@@ -588,7 +594,7 @@ A lot more work still needs to be done before this system can be used in product
 
 ## How much time I spent
 
-Approximately 49 hours over 4 days.
+Approximately 49 to 50 hours hours over 4 days.
 
     13/06/2025
     09:00 to 18:00
@@ -606,8 +612,8 @@ Approximately 49 hours over 4 days.
     13 hours
 
     16/06/2026
-    9:30 to 21:00
-    11.5 hours
+    9:30 to 21:50
+    12.3 hours
 
 ## Is my solution simple?
 
