@@ -16,6 +16,7 @@ type Header struct {
 	MessageID int64 `json:"id"`
 	Action    int   `json:"action"`
 }
+
 type Deposit struct {
 	Header       Header `json:"header"`
 	Status       int    `json:"status,omitempty"`

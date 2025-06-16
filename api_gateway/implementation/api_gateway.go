@@ -3,10 +3,12 @@ package implementation
 import (
 	"api_gateway/config"
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"net"
 	"net/http"
+	"shared/responses"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -15,183 +17,92 @@ import (
 )
 
 type APIGateway struct {
-
-	// API gateway settings
 	config           *config.Config
 	is_alive         atomic.Bool
 	http_server      *http.Server
-	http_multiplexer HTTPRequestMultiplexer
+	http_multiplexer *http_request_multiplexer
+	redis_manager    *redis_manager
 	waitgroup        sync.WaitGroup
 }
 
-func CreateAPIGateway(config *config.Config) *APIGateway {
-	api_gateway := &APIGateway{
-		config:      config,
-		http_server: nil,
-		http_multiplexer: HTTPRequestMultiplexer{
-			config:  config,
-			context: context.Background(),
-		},
-	}
-	api_gateway.http_multiplexer.global_id.Store(0)
-	return api_gateway
-}
-
-func (api_gateway *APIGateway) prepare_redis_clients() error {
+func CreateAPIGateway(config *config.Config) (*APIGateway, error) {
 
 	background_context := context.Background()
 
-	{
-		// Prepare deposit requests queue
-		deposit_requests_queue := redis.NewClient(api_gateway.config.DepositsService.RequestsQueue.GetRedisOptions())
-
-		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.DepositsService.RequestsQueue.Timeout)*time.Second)
-		_, err := deposit_requests_queue.Ping(timeout_context).Result()
-		if err != nil {
-			cancel()
-			return err
-		}
-		cancel()
-
-		api_gateway.http_multiplexer.deposit_requests_queue = deposit_requests_queue
+	redis_manager_, err := create_redis_manager(config, background_context)
+	if err != nil {
+		return nil, err
 	}
 
-	{
-		// Prepare deposit responses queue
-		deposit_responses_queue := redis.NewClient(api_gateway.config.DepositsService.ResponsesQueue.GetRedisOptions())
-
-		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.DepositsService.ResponsesQueue.Timeout)*time.Second)
-		_, err := deposit_responses_queue.Ping(timeout_context).Result()
-		if err != nil {
-			cancel()
-			return err
-		}
-		cancel()
-
-		api_gateway.http_multiplexer.deposit_responses_queue = deposit_responses_queue
+	http_multiplexer, err := create_http_request_multiplexer(config, redis_manager_, background_context)
+	if err != nil {
+		return nil, err
 	}
 
-	{
-		// Prepare withdrawal requests queue
-		withdrawal_requests_queue := redis.NewClient(api_gateway.config.WithdrawalService.RequestsQueue.GetRedisOptions())
-
-		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.WithdrawalService.RequestsQueue.Timeout)*time.Second)
-		_, err := withdrawal_requests_queue.Ping(timeout_context).Result()
-		if err != nil {
-			cancel()
-			return err
-		}
-		cancel()
-
-		api_gateway.http_multiplexer.withdrawal_requests_queue = withdrawal_requests_queue
+	api_gateway := &APIGateway{
+		config:           config,
+		http_server:      nil,
+		http_multiplexer: http_multiplexer,
+		redis_manager:    redis_manager_,
 	}
 
-	{
-		// Prepare withdrawal responses queue
-		withdrawal_responses_queue := redis.NewClient(api_gateway.config.WithdrawalService.ResponsesQueue.GetRedisOptions())
+	return api_gateway, nil
+}
 
-		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.WithdrawalService.ResponsesQueue.Timeout)*time.Second)
-		_, err := withdrawal_responses_queue.Ping(timeout_context).Result()
-		if err != nil {
-			cancel()
-			return err
-		}
-		cancel()
+func (api_gateway *APIGateway) Run() {
+	api_gateway.is_alive.Store(true)
 
-		api_gateway.http_multiplexer.withdrawal_responses_queue = withdrawal_responses_queue
+	api_gateway.waitgroup.Add(1)
+	go api_gateway.async_read_responses(
+		service_balance,
+		api_gateway.redis_manager.balance_responses_queue,
+		&api_gateway.http_multiplexer.balance_responses_cache,
+		&api_gateway.config.BalanceService.ResponsesQueue)
+
+	api_gateway.waitgroup.Add(1)
+	go api_gateway.async_read_responses(
+		service_deposit,
+		api_gateway.redis_manager.deposit_responses_queue,
+		&api_gateway.http_multiplexer.deposit_responses_cache,
+		&api_gateway.config.DepositsService.ResponsesQueue)
+
+	api_gateway.waitgroup.Add(1)
+	go api_gateway.async_read_responses(
+		service_transaction_history,
+		api_gateway.redis_manager.transaction_history_responses_queue,
+		&api_gateway.http_multiplexer.transaction_history_responses_cache,
+		&api_gateway.config.TransactionHistoryService.ResponsesQueue)
+
+	api_gateway.waitgroup.Add(1)
+	go api_gateway.async_read_responses(
+		service_transfer,
+		api_gateway.redis_manager.transfer_responses_queue,
+		&api_gateway.http_multiplexer.transfer_responses_cache,
+		&api_gateway.config.TransferService.ResponsesQueue)
+
+	api_gateway.waitgroup.Add(1)
+	go api_gateway.async_read_responses(
+		service_withdraw,
+		api_gateway.redis_manager.withdrawal_responses_queue,
+		&api_gateway.http_multiplexer.withdrawal_responses_cache,
+		&api_gateway.config.WithdrawalService.ResponsesQueue)
+
+	api_gateway.waitgroup.Add(1)
+	go api_gateway.async_http_server()
+}
+
+func (api_gateway *APIGateway) Shutdown() {
+	api_gateway.is_alive.Store(false)
+	if api_gateway.http_server != nil {
+		// No need to handle error returned by Server.Shutdown.
+		// The signal to abort is already sent. Just terminate the application
+		// regardless of whether an error occurs during shutdown.
+		context_ := context.Background()
+		context_with_timeout, cancel := context.WithTimeout(context_, time.Duration(5)*time.Second)
+		defer cancel()
+		api_gateway.http_server.Shutdown(context_with_timeout)
 	}
-
-	{
-		// Prepare transfer requests queue
-		transfer_requests_queue := redis.NewClient(api_gateway.config.TransferService.RequestsQueue.GetRedisOptions())
-
-		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.TransferService.RequestsQueue.Timeout)*time.Second)
-		_, err := transfer_requests_queue.Ping(timeout_context).Result()
-		if err != nil {
-			cancel()
-			return err
-		}
-		cancel()
-
-		api_gateway.http_multiplexer.transfer_requests_queue = transfer_requests_queue
-	}
-
-	{
-		// Prepare transfer responses queue
-		transfer_responses_queue := redis.NewClient(api_gateway.config.TransferService.ResponsesQueue.GetRedisOptions())
-
-		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.TransferService.ResponsesQueue.Timeout)*time.Second)
-		_, err := transfer_responses_queue.Ping(timeout_context).Result()
-		if err != nil {
-			cancel()
-			return err
-		}
-		cancel()
-
-		api_gateway.http_multiplexer.transfer_responses_queue = transfer_responses_queue
-	}
-
-	{
-		// Prepare balance requests queue
-		balance_requests_queue := redis.NewClient(api_gateway.config.BalanceService.RequestsQueue.GetRedisOptions())
-
-		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.BalanceService.RequestsQueue.Timeout)*time.Second)
-		_, err := balance_requests_queue.Ping(timeout_context).Result()
-		if err != nil {
-			cancel()
-			return err
-		}
-		cancel()
-
-		api_gateway.http_multiplexer.balance_requests_queue = balance_requests_queue
-	}
-
-	{
-		// Prepare balance responses queue
-		balance_responses_queue := redis.NewClient(api_gateway.config.BalanceService.ResponsesQueue.GetRedisOptions())
-
-		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.BalanceService.ResponsesQueue.Timeout)*time.Second)
-		_, err := balance_responses_queue.Ping(timeout_context).Result()
-		if err != nil {
-			cancel()
-			return err
-		}
-		cancel()
-
-		api_gateway.http_multiplexer.balance_responses_queue = balance_responses_queue
-	}
-
-	{
-		// Prepare transaction history requests queue
-		transaction_history_requests_queue := redis.NewClient(api_gateway.config.TransactionHistoryService.RequestsQueue.GetRedisOptions())
-
-		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.TransactionHistoryService.RequestsQueue.Timeout)*time.Second)
-		_, err := transaction_history_requests_queue.Ping(timeout_context).Result()
-		if err != nil {
-			cancel()
-			return err
-		}
-		cancel()
-
-		api_gateway.http_multiplexer.transaction_history_requests_queue = transaction_history_requests_queue
-	}
-
-	{
-		// Prepare transaction history responses queue
-		transaction_history_responses_queue := redis.NewClient(api_gateway.config.TransactionHistoryService.ResponsesQueue.GetRedisOptions())
-
-		timeout_context, cancel := context.WithTimeout(background_context, time.Duration(api_gateway.config.TransactionHistoryService.ResponsesQueue.Timeout)*time.Second)
-		_, err := transaction_history_responses_queue.Ping(timeout_context).Result()
-		if err != nil {
-			cancel()
-			return err
-		}
-		cancel()
-
-		api_gateway.http_multiplexer.transaction_history_responses_queue = transaction_history_responses_queue
-	}
-
-	return nil
+	api_gateway.waitgroup.Wait()
 }
 
 func (api_gateway *APIGateway) async_http_server() {
@@ -201,11 +112,6 @@ func (api_gateway *APIGateway) async_http_server() {
 	}()
 
 	config := api_gateway.config
-
-	err := api_gateway.prepare_redis_clients()
-	if err != nil {
-		log.Fatal("Could not connect to Redis server: ", err)
-	}
 
 	// Server continues running until terminated by user
 	for api_gateway.is_alive.Load() {
@@ -224,7 +130,7 @@ func (api_gateway *APIGateway) async_http_server() {
 
 		api_gateway.http_server = &http.Server{
 			Addr:         ":" + config.HTTPServer.ListenPort,
-			Handler:      &api_gateway.http_multiplexer,
+			Handler:      api_gateway.http_multiplexer,
 			ReadTimeout:  time.Duration(config.HTTPServer.ReadTimeout) * time.Second,
 			WriteTimeout: time.Duration(config.HTTPServer.WriteTimeout) * time.Second,
 			IdleTimeout:  time.Duration(config.HTTPServer.IdleTimeout) * time.Second,
@@ -239,41 +145,90 @@ func (api_gateway *APIGateway) async_http_server() {
 	}
 }
 
-func (api_gateway *APIGateway) async_read_responses() {
+func (api_gateway *APIGateway) async_read_responses(
+	service_type int,
+	responses_queue *redis.Client,
+	response_cache *sync.Map,
+	config *config.RedisMessageQueue) {
 
+	service_name := get_service_name(service_type)
 	defer func() {
 		api_gateway.waitgroup.Done()
-		log.Println("Shutdown API responses thread.")
+		log.Println("Shutdown " + service_name + " responses thread.")
 	}()
 
-	log.Println("Started up response reading thread.")
+	log.Println("Started up " + service_name + " responses thread.")
+
+	// Define aliases
+	timeout := time.Duration(config.Timeout) * time.Second
+	queue_name := config.QueueName
+
 	for api_gateway.is_alive.Load() {
 
-		// Read from Redis message queues
+		// Read from Redis responses queue
+		timeout_context, cancel := context.WithTimeout(api_gateway.http_multiplexer.context, timeout)
+		string_slice, err := responses_queue.BRPop(timeout_context, timeout, queue_name).Result()
+		if err != nil {
+			cancel()
+			continue
+		}
+		cancel()
 
-		// Put the responses in api_gateway.http_multiplexer.api_responses
+		// string_slice[0] gives the name of the queue
+		// string_slice[1] gives the data retrieved from the queue
+		// Response is prepared by the primary backend service, not the API gateway.
 
-		time.Sleep(1 * time.Second)
+		// Put the response in the asynchronous map
+		switch service_type {
+		case service_balance:
+
+			response_message := responses.Balance{}
+			err := json.Unmarshal([]byte(string_slice[1]), &response_message)
+			if err != nil {
+				log.Println("Error deserialising JSON message. Must not happen in production.")
+				continue
+			}
+			response_cache.Store(response_message.Header.MessageID, response_message)
+
+		case service_deposit:
+
+			response_message := responses.Deposit{}
+			err := json.Unmarshal([]byte(string_slice[1]), &response_message)
+			if err != nil {
+				log.Println("Error deserialising JSON message. Must not happen in production.")
+				continue
+			}
+			response_cache.Store(response_message.Header.MessageID, response_message)
+
+		case service_transaction_history:
+
+			response_message := responses.TransactionHistory{}
+			err := json.Unmarshal([]byte(string_slice[1]), &response_message)
+			if err != nil {
+				log.Println("Error deserialising JSON message. Must not happen in production.")
+				continue
+			}
+			response_cache.Store(response_message.Header.MessageID, response_message)
+
+		case service_transfer:
+
+			response_message := responses.Transfer{}
+			err := json.Unmarshal([]byte(string_slice[1]), &response_message)
+			if err != nil {
+				log.Println("Error deserialising JSON message. Must not happen in production.")
+				continue
+			}
+			response_cache.Store(response_message.Header.MessageID, response_message)
+
+		case service_withdraw:
+
+			response_message := responses.Withdraw{}
+			err := json.Unmarshal([]byte(string_slice[1]), &response_message)
+			if err != nil {
+				log.Println("Error deserialising JSON message. Must not happen in production.")
+				continue
+			}
+			response_cache.Store(response_message.Header.MessageID, response_message)
+		}
 	}
-}
-
-func (api_gateway *APIGateway) Run() {
-	api_gateway.is_alive.Store(true)
-	api_gateway.waitgroup.Add(2)
-	go api_gateway.async_http_server()
-	go api_gateway.async_read_responses()
-}
-
-func (api_gateway *APIGateway) Shutdown() {
-	api_gateway.is_alive.Store(false)
-	if api_gateway.http_server != nil {
-		// No need to handle error returned by Server.Shutdown.
-		// The signal to abort is already sent. Just terminate the application
-		// regardless of whether an error occurs during shutdown.
-		context_ := context.Background()
-		context_with_timeout, cancel := context.WithTimeout(context_, time.Duration(5)*time.Second)
-		defer cancel()
-		api_gateway.http_server.Shutdown(context_with_timeout)
-	}
-	api_gateway.waitgroup.Wait()
 }

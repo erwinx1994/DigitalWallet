@@ -21,7 +21,10 @@ func Test_APIGateway(t *testing.T) {
 	}
 
 	// Start running API gateway
-	api_gateway := CreateAPIGateway(config)
+	api_gateway, err := CreateAPIGateway(config)
+	if err != nil {
+		t.Fatal(err)
+	}
 	api_gateway.Run()
 	defer api_gateway.Shutdown()
 

@@ -26,7 +26,10 @@ func main() {
 	log.Println("Successfully loaded configuration file at ", config_file_path)
 
 	// Start running API gateway
-	api_gateway := implementation.CreateAPIGateway(config)
+	api_gateway, err := implementation.CreateAPIGateway(config)
+	if err != nil {
+		log.Fatal("Unable to start API gateway.")
+	}
 	api_gateway.Run()
 
 	// Listen for abort signal to terminate the api_gateway

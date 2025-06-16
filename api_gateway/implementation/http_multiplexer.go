@@ -10,18 +10,14 @@ import (
 	"log"
 	"net/http"
 	"shared/messages"
+	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
 
-type QueueItem struct {
-	id        int64
-	json_body []byte
-}
-
-type HTTPRequestMultiplexer struct {
+type http_request_multiplexer struct {
 	config    *config.Config
 	context   context.Context
 	global_id atomic.Int64
@@ -30,24 +26,42 @@ type HTTPRequestMultiplexer struct {
 	// should use twitter's snowflake approach or a globally unique identifier but lack of time.
 	// This is ignored for now. Assume only a single thread puts items on the queue.
 
-	// Resource handles to request and response queues
-	deposit_requests_queue              *redis.Client
-	deposit_responses_queue             *redis.Client
-	withdrawal_requests_queue           *redis.Client
-	withdrawal_responses_queue          *redis.Client
-	transfer_requests_queue             *redis.Client
-	transfer_responses_queue            *redis.Client
-	balance_requests_queue              *redis.Client
-	balance_responses_queue             *redis.Client
-	transaction_history_requests_queue  *redis.Client
-	transaction_history_responses_queue *redis.Client
+	// Resource handles to Redis queues
+	deposit_requests_queue             *redis.Client
+	withdrawal_requests_queue          *redis.Client
+	transfer_requests_queue            *redis.Client
+	balance_requests_queue             *redis.Client
+	transaction_history_requests_queue *redis.Client
+
+	// Cache which stores responses
+	deposit_responses_cache             sync.Map
+	withdrawal_responses_cache          sync.Map
+	transfer_responses_cache            sync.Map
+	balance_responses_cache             sync.Map
+	transaction_history_responses_cache sync.Map
 }
 
-func (mux *HTTPRequestMultiplexer) send_request_and_return_response(
+func create_http_request_multiplexer(config *config.Config, redis_manager *redis_manager, background_context context.Context) (*http_request_multiplexer, error) {
+
+	http_multiplexer := http_request_multiplexer{
+		config:                             config,
+		context:                            background_context,
+		deposit_requests_queue:             redis_manager.deposit_requests_queue,
+		withdrawal_requests_queue:          redis_manager.withdrawal_requests_queue,
+		transfer_requests_queue:            redis_manager.transfer_requests_queue,
+		balance_requests_queue:             redis_manager.balance_requests_queue,
+		transaction_history_requests_queue: redis_manager.transaction_history_requests_queue,
+	}
+	http_multiplexer.global_id.Store(0)
+
+	return &http_multiplexer, nil
+}
+
+func (mux *http_request_multiplexer) send_request_and_return_response(
 	bytes_to_send []byte,
 	backend_service *config.Service,
 	requests_queue *redis.Client,
-	responses_queue *redis.Client,
+	responses_cache *sync.Map,
 	writer http.ResponseWriter) {
 
 	// Define aliases
@@ -64,29 +78,31 @@ func (mux *HTTPRequestMultiplexer) send_request_and_return_response(
 	}
 	cancel()
 
-	// Define aliases
-	timeout = time.Duration(backend_service.ResponsesQueue.Timeout) * time.Second
-	queue_name = backend_service.ResponsesQueue.QueueName
+	/*
+		// Define aliases
+		timeout = time.Duration(backend_service.ResponsesQueue.Timeout) * time.Second
+		queue_name = backend_service.ResponsesQueue.QueueName
 
-	// Wait for response to request
-	timeout_context, cancel = context.WithTimeout(mux.context, timeout)
-	string_slice, err := responses_queue.BRPop(timeout_context, timeout, queue_name).Result()
-	if err != nil {
-		writer.WriteHeader(http.StatusInternalServerError)
+		// Wait for response to request
+		timeout_context, cancel = context.WithTimeout(mux.context, timeout)
+		string_slice, err := responses_queue.BRPop(timeout_context, timeout, queue_name).Result()
+		if err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			cancel()
+			return
+		}
 		cancel()
-		return
-	}
-	cancel()
+	*/
 
 	// string_slice[0] gives the name of the queue
 	// string_slice[1] gives the data retrieved from the queue
 	// Response is prepared by the primary backend service, not the API gateway.
 
 	// Send response to user
-	writer.Write([]byte(string_slice[1]))
+	// writer.Write([]byte(string_slice[1]))
 }
 
-func (mux *HTTPRequestMultiplexer) POST_Deposit(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
+func (mux *http_request_multiplexer) POST_Deposit(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
 
 	// Extract body of message
 	if request.ContentLength <= 0 {
@@ -139,11 +155,11 @@ func (mux *HTTPRequestMultiplexer) POST_Deposit(input *paths.MatchResult, writer
 		bytes,
 		&mux.config.DepositsService,
 		mux.deposit_requests_queue,
-		mux.deposit_responses_queue,
+		&mux.deposit_responses_cache,
 		writer)
 }
 
-func (mux *HTTPRequestMultiplexer) POST_Withdrawal(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
+func (mux *http_request_multiplexer) POST_Withdrawal(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
 
 	// Extract body of message
 	if request.ContentLength <= 0 {
@@ -196,11 +212,11 @@ func (mux *HTTPRequestMultiplexer) POST_Withdrawal(input *paths.MatchResult, wri
 		bytes,
 		&mux.config.WithdrawalService,
 		mux.withdrawal_requests_queue,
-		mux.withdrawal_responses_queue,
+		&mux.withdrawal_responses_cache,
 		writer)
 }
 
-func (mux *HTTPRequestMultiplexer) POST_Transfer(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
+func (mux *http_request_multiplexer) POST_Transfer(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
 
 	// Extract body of message
 	if request.ContentLength <= 0 {
@@ -251,12 +267,12 @@ func (mux *HTTPRequestMultiplexer) POST_Transfer(input *paths.MatchResult, write
 		bytes,
 		&mux.config.TransferService,
 		mux.transfer_requests_queue,
-		mux.transfer_responses_queue,
+		&mux.transfer_responses_cache,
 		writer)
 
 }
 
-func (mux *HTTPRequestMultiplexer) POST_Test(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
+func (mux *http_request_multiplexer) POST_Test(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
 
 	// Extract body of message
 	if request.ContentLength <= 0 {
@@ -280,7 +296,7 @@ func (mux *HTTPRequestMultiplexer) POST_Test(input *paths.MatchResult, writer ht
 	writer.Write(bytes)
 }
 
-func (mux *HTTPRequestMultiplexer) GET_WalletBalance(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
+func (mux *http_request_multiplexer) GET_WalletBalance(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
 
 	// Verify that input is correct
 	wallet_id, exist := input.WildcardSegments["wallet_id"]
@@ -311,12 +327,12 @@ func (mux *HTTPRequestMultiplexer) GET_WalletBalance(input *paths.MatchResult, w
 		bytes,
 		&mux.config.BalanceService,
 		mux.balance_requests_queue,
-		mux.balance_responses_queue,
+		&mux.balance_responses_cache,
 		writer)
 
 }
 
-func (mux *HTTPRequestMultiplexer) GET_TransactionHistory(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
+func (mux *http_request_multiplexer) GET_TransactionHistory(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
 
 	// Verify that input is correct
 	wallet_id, exist := input.WildcardSegments["wallet_id"]
@@ -363,12 +379,12 @@ func (mux *HTTPRequestMultiplexer) GET_TransactionHistory(input *paths.MatchResu
 		bytes,
 		&mux.config.TransactionHistoryService,
 		mux.transaction_history_requests_queue,
-		mux.transaction_history_responses_queue,
+		&mux.transaction_history_responses_cache,
 		writer)
 
 }
 
-func (mux *HTTPRequestMultiplexer) GET_Test(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
+func (mux *http_request_multiplexer) GET_Test(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
 
 	// Log content of request
 	log.Println("Method: ", request.Method)
@@ -392,7 +408,7 @@ func (mux *HTTPRequestMultiplexer) GET_Test(input *paths.MatchResult, writer htt
 	writer.Write([]byte(bytes))
 }
 
-func (mux *HTTPRequestMultiplexer) ProcessGETRequests(writer http.ResponseWriter, request *http.Request) {
+func (mux *http_request_multiplexer) ProcessGETRequests(writer http.ResponseWriter, request *http.Request) {
 
 	// Request for balance
 	result := paths.MatchAndExtract(request.URL.Path, paths.Wallets_balance)
@@ -416,7 +432,7 @@ func (mux *HTTPRequestMultiplexer) ProcessGETRequests(writer http.ResponseWriter
 	}
 }
 
-func (mux *HTTPRequestMultiplexer) ProcessPOSTRequests(writer http.ResponseWriter, request *http.Request) {
+func (mux *http_request_multiplexer) ProcessPOSTRequests(writer http.ResponseWriter, request *http.Request) {
 
 	// Deposit money into wallet
 	result := paths.MatchAndExtract(request.URL.Path, paths.Wallets_deposits)
@@ -449,7 +465,7 @@ func (mux *HTTPRequestMultiplexer) ProcessPOSTRequests(writer http.ResponseWrite
 }
 
 // A new goroutine is created to serve each HTTP request
-func (mux *HTTPRequestMultiplexer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+func (mux *http_request_multiplexer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	if request.Method == http.MethodGet {
 		mux.ProcessGETRequests(writer, request)
 	} else if request.Method == http.MethodPost {
