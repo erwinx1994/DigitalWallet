@@ -265,6 +265,10 @@ Alternatively, you can also use this script in the root directory of the project
 
     start_backend_services.bat
 
+This is also a script that allows you to shutdown all backend services easily.
+
+    shutdown_all.bat
+
 ## Unit tests
 
 The unit tests were not written to achieve 100% code coverage. They were written to test that the core functionality of each backend module works. 
