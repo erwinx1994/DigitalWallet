@@ -2,6 +2,13 @@ package utilities
 
 import "errors"
 
+func is_digit(character byte) bool {
+	if character >= '0' && character <= '9' {
+		return true
+	}
+	return false
+}
+
 /*
 Money is represented using a 64 bit integer in the database to avoid precision loss.
 
@@ -92,9 +99,15 @@ func Convert_display_to_database_format(display_amount string) (int64, error) {
 	for i := 0; i < len(display_amount); i++ {
 		character := display_amount[i]
 		if character == '.' {
+			if after_decimal_place {
+				return 0, errors.New("Only 1 dot is allowed in the amount entered")
+			}
 			after_decimal_place = true
 			continue
 		} else {
+			if !is_digit(character) {
+				return 0, errors.New("Only digits and dots are allowed in the amount entered")
+			}
 			digit := int64(character - '0')
 			sum = sum*10 + digit
 			if after_decimal_place {
