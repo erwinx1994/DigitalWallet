@@ -81,7 +81,7 @@ The requirement to transfer money to and from the bank was removed. This greatly
 Instead of trying to achieve the grandiose objectives of being highly scalable, available, secure and durable,
 
 - The system has to be cheap to build and simple enough for 1 person to build in 3 to 5 days.
-- At the very least, the system must be potentially scalable
+- At the very least, the system must be potentially scalable and have some of the beneficial characteristics of a highly distributed system.
 
 ### Final system design
 
@@ -102,6 +102,8 @@ The user device first sends the request to the API gateway. The API gateway then
 There may come a point where the number of people the system needs to cater to exponentially increases. One way to scale such a system is to partition the database where each partition stores only a subset of user data. If updating the database is the bottle neck, the microservice architecture of this simplfied system design allows us to scale simply by connecting the API gateway to more instances of backend service responsible for performing the function. See the PDF document below for an example. The example below also describes how consistent hashing can be used to distribute user data over several database partitions.
 
 [./docs/Example of scalability.pdf](./docs/Example%20of%20scalability.pdf)
+
+A microservice architecture also helps to improve the availability of the system. If the deposit service is down, the user will still be able to withdraw from his wallet and view his transactions. 
 
 ### Design of database tables
 
@@ -176,6 +178,48 @@ This command allows you to get the transaction history of the specified wallet f
 A demo of Digital Wallet in action is shown in this video here.
 
     https://www.youtube.com/watch?v=H_BYeeOGn_I
+
+## How to review the code
+
+The root directory of this repository does not contain a project that can be compiled. It contains several different applications and libraries in different subfolders. The applications and libraries are used in a manner conforming to the simplfiied system design diagram previously mentioned.
+
+[./docs/Simplified digital wallet system.pdf](./docs/Simplified%20digital%20wallet%20system.pdf)
+
+What is contained within each subfolder is described below.
+
+    ./api_client
+    Project for api_client application. Can be compiled and executed.
+
+    ./api_gateway
+    Project for api_gateway application. Can be compiled and executed.
+
+    ./balance_service
+    Project for balance service which retrieves the balance of a wallet from the PostgreSQL database. It can be compiled and executed.
+
+    ./deposit_service
+    Project for deposit service which handles updating the PostgreSQL database when depositing money into a wallet. It can be compiled and executed.
+
+    ./docs
+    Additional documentation.
+
+    ./images
+    Media supporting the documentation.
+
+    ./shared
+    A local library shared and imported by all applications. Cannot be compiled directly but can be unit tested.
+
+    ./transaction_history_service
+    Project for transaction history service which retrieves the transaction history of a wallet from the PostgreSQL database.
+
+    ./transfer_service
+    Project for transfer service which updates the PostgreSQL database when transferring money from one wallet to another.
+
+    ./withdraw_service
+    Project for withdraw service which updates the PostgreSQL database when withdrawing money from a wallet.
+
+Each project for an executable service contains a **config** subdirectory. This is where code for its configuration file is managed. The inner workings of each executable service is placed in the **implementation** subdirectory. There may also be other subfolders for each executable service that contains code that are commonly reused.
+
+If you are unsure of how the applications relate to each other, refer to the simplified system design diagram!
 
 ## Set up of environment
 
@@ -494,4 +538,80 @@ Since each subdirectory of this project hosts a different application, you need 
 There is also a helper script in the root directory of this repository that allows you to run all the unit tests in one command.
 
     run_unit_tests.bat
+
+## Areas of improvement
+
+1. Redis is currently used to transfer messages from one service to another. The messages are not persistent. Data can be lost if any of the queues crash. Find a way to have redis log each request received to disk.
+
+2. The system needs to interact with actual banks if it is to be deployed in production. It will be much more complex. Nobody wants to use banana money in real life.
+
+3. Security. No authentication was built into this system due to time and resource constraints. Security must be built in before anyone will even consider using this sytem since we are handling money. We can consider password authentication and two factor authentication.
+
+4. The basic system design by itself is not highly available, we would need to think how the database, message queues, API gateway and request processing services can be replicated to ensure high availability.
+
+5. Scalability is achieved through replication and sharding. Several techniques exist to distribute user data over multiple databases. Consistent hashing, lookup service pattern, range based techniques, etc.
+
+6. Due to time constraints, performance testing has not been done to determine if the system will be able to handle production load. This is key to determining whether our system is inadequate, sufficient or significantly overperforming. It is a waste of time and money to build a system that substantally exceeds performance requirements.
+
+7. The DIY algorithms for detecting wildcards, keys and values in in URL paths and for converting from integer to string representation of balances can be improved. While the algorithms are already the most optimal, they still use Go's string concatentation operator to append characters to the end of a string which always needs to reallocate memory. Using a block of bytes that gets allocated once only on program startup and a pointer to the next element to copy data can prevent wasteful reallocations when the program is running and further reduce the time complexity of the algorithm.
+
+8. Due to time constraints, I could not build an error reporting service into the backend applications. An error reporting service is required in a production set up such that the system administrator is notified of any anomalies that should not happen in production. The error reports may be sent by email or SMS.
+
+## Does it satisfy functional and non-functional requirements? 
+
+I managed to build a system that meets the minimum functional requirements of the system as requested for this assignment. We have a backend system (api gateway, balance service, deposit service, withdraw service, transfer service and transaction history service) and a corresponding front end client application (api_client) that works in synchrony to deliver these 5 services.
+
+- Deposit money into his wallet. 
+- Withdraw money from his wallet.
+- Transfer money from one wallet to another.
+- Retrieve the balance of his wallet.
+- Retrieve the transaction history of his wallet.
+
+This system also satisfies this non-functional requirement.
+
+- At the very least, the system must be potentially scalable and have some of the beneficial characteristics of a highly distributed system.
+
+Its microservice architecture and distributed nature makes its easily scalable and extendable. It also improves the availability of the system. e.g. If the deposit service fails, the other services may remain up and running and the user may still be able to withdraw money and view their transaction histories.
+
+## Which features did I not do?
+
+A lot more work still needs to be done before this system can be used in production.
+
+1. Security. Password authentication. Two factor authentication.
+2. Ensuring high availability
+3. Performance testing.
+4. Ensuring low latency.
+5. Data durability. Requests can currently be lost if any of the backend services crashes.
+6. Set up of error reporting service
+7. Set up of backend monitoring service.
+8. Interaction with banking systems.
+
+## How much time I spent
+
+Approximately 49 hours over 4 days.
+
+    13/06/2025
+    09:00 to 18:00
+    21:00 to 01:00 
+    13 hours
+
+    14/05/2025
+    9:30 to 11:30
+    12:00 to 21:30
+    11.5 hours
+
+    15/05/2025
+    10:00 to 11:55
+    13:25 to 00:45
+    13 hours
+
+    16/06/2026
+    9:30 to 21:00
+    11.5 hours
+
+## Is my solution simple?
+
+This solution is about as simple as it gets that still provides some beneficial characteristics of a highly distributed system.
+
+There is one even simpler solution which is to build all services into one monolithic backend application. But this solution cannot be scaled. The entire service will go down if the single monolithic backend application crashes.
 
