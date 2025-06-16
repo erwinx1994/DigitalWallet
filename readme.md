@@ -2,6 +2,9 @@
 
 This repository provides multiple applications that work together to function as a backend for a digital wallet service. The purpose of each application is described below.
 
+    api_client
+    Front end application for depositing money, withdrawing money, transferring money, getting the balance of a wallet and retrieving the transaction history of a wallet.
+
     api_gateway
     Route incoming HTTP requests from the user to the correct backend service. 
     Return the result after processing to the user.
@@ -23,11 +26,105 @@ This repository provides multiple applications that work together to function as
 
 The system design diagram that connects them all can be found in the [./docs/Simplified digital wallet system.pdf](./docs/Simplified%20digital%20wallet%20system.pdf) file in this repository.
 
+## Design of system
+
+### Initial attempt
+
+The initial attempt to design the system is shown in the [./docs/Initial attempt digital wallet system.pdf](./docs/Initial%20attempt%20digital%20wallet%20system.pdf) file in this repository. The first few steps when designing a system is to work out who are its users and what functional and non-functional requirements need to be met to cater to the users.
+
+**Who are its users**
+
+People needing to transfer money locally or across international borders.
+Examples: Wise, Grab Wallet
+
+**Functional requirements**
+
+Functional requirements are what the system needs to do, as determined by the customer.
+
+The user must be able to do the following through a client side application using RESTful API calls as described in the question.
+
+- Deposit money into his wallet. The user will have to pay us by bank transfer.
+- Withdraw money from his wallet. We will have to pay the user by bank transfer.
+- Transfer money from one wallet to another.
+- Retrieve the balance of his wallet.
+- Retrieve the transaction history of his wallet.
+
+**Non-functional requirements**
+
+Non-functional requirements are the qualities that the system needs to have. 
+
+- System has to be secure. The user must be authenticated before he is allowed to perform any of the above API calls.
+- Transactions entered by the user must not be lost: depositing money, withdrawing money, transferring money. The data must be highly durable. This is so that all transactions are traceable and can be restored even in the event of a system crash.
+- Highly available. The system must be up 99% or more of the time.
+- Highly scalable. The system can be scaled to cater to an exponentially increasing number of users.
+
+The [./docs/Initial attempt digital wallet system.pdf](./docs/Initial%20attempt%20digital%20wallet%20system.pdf) shows an initial attempt to design a system that meets all of the above requirements. Its not complete. Halfway through it, ...
+
+### But, wait a minute
+
+Only 1 person was assigned to do this task over a period of 3 to 5 days! It is becoming clear that he will not be able to build such a highly available, scalable, secure and durable system given the limited resources at hand. 
+
+Targets for both functional and non-functional requirements were thus compromised such that it becomes possible for a single person to build a minimum viable product in 3 to 5 days (72 to 120 hours). The new set of functional and non-functional requirements are described below.
+
+**Functional requirements**
+
+The requirement to transfer money to and from the bank was removed. This greatly reduces development time.
+
+- Deposit money into his wallet. 
+- Withdraw money from his wallet.
+- Transfer money from one wallet to another.
+- Retrieve the balance of his wallet.
+- Retrieve the transaction history of his wallet.
+
+**Non-functional requirements**
+
+Instead of trying to achieve the grandiose objectives of being highly scalable, available, secure and durable,
+
+- The system has to be cheap to build and simple enough for 1 person to build in 3 to 5 days.
+- At the very least, the system must be potentially scalable
+
+### Final system design
+
+This new simplified system design diagram was the result of simplfying the requirements that need to be met.
+
+[./docs/Simplified digital wallet system.pdf](./docs/Simplified%20digital%20wallet%20system.pdf)
+
+At the very least, this new system was designed to give you the potential to scale. It does do by having a separate backend service for each functional requirement that needs to be met. 
+
+- Deposit money into his wallet. 
+- Withdraw money from his wallet.
+- Transfer money from one wallet to another.
+- Retrieve the balance of his wallet.
+- Retrieve the transaction history of his wallet.
+
+The user device first sends the request to the API gateway. The API gateway then puts the request into a message queue to be processed by another service (deposit service, withdraw service, transfer service, etc.) which updates the database directly. Using a queue decouples the performance of the upstream and downstream applications.
+
+There may come a point where the number of people the system needs to cater to exponentially increases. One way to scale such a system is to partition the database where each partition stores only a subset of user data. If updating the database is the bottle neck, the microservice architecture of this simplfied system design allows us to scale simply by connecting the API gateway to more instances of backend service responsible for performing the function. See the PDF document below for an example. The example below also describes how consistent hashing can be used to distribute user data over several database partitions.
+
+[./docs/Example of scalability.pdf](./docs/Example%20of%20scalability.pdf)
+
+### Design of database tables
+
+For simplicity, the system was not designed not maintain a table of user data (username, name, address, date of bith etc.). The system only maintains two tables. One for storing transactions and one for storing balances. Each unique wallet ID corresponds to a user account opened with us. Each wallet is associated with 1 currency only. The user only needs to member his wallet ID to use our digital wallet. A user may open multiple wallets with us, each of a different currency, if he chooses to do so.
+
+The **balances** table stores only the wallet ID, currency and balance of a user wallet. Balances are stored as integers to avoid precision loss. The user can enter an amount up to 2 decimal places (0.01). The amount is multiplied by 100 before saving it to the database (0.01 becomes 1). 
+
+    Wallet ID, Currency, Balance
+    wallet_id_1, SGD, 10000
+
+The **transactions** table stores the wallet ID, date and time, currency and amount of a transaction. A deposit is indicated by a positive amount. A withdrawal is indicated by a negative amount. This allows the balance of a wallet to be easily computed using database functions later on (if needed).
+
+    Wallet ID, Date and time UTC, Currency, Amount
+    wallet_id_1, YYYYMMDD-HH:MM:SS, SGD, 10000
+    wallet_id_1, YYYYMMDD-HH:MM:SS, SGD, -2000
+
 ## Client application
 
 The client application can be found in the **api_client** subfolder of this repository. Once compiled, it can be used to interact with the backend applications to manage your wallet.
 
-This command allows you to deposit an amount of money in the specified wallet in the specified currency.
+
+
+This command allows you to deposit an amount of money in the specified wallet in the specified currency. This is also how an acccount is first created. 
 
 	api_client deposit <wallet_id> <currency> <amount>
 
@@ -252,7 +349,7 @@ Alternatively, you can also use this script in the root directory of the project
 
 You should not need to change anything in the configuration file (**config.yml**) file for each backend service if you have set up the Redis and PostgreSQL databases correctly.
 
-After compiling, in Windows, double on the executable file for each backend service from their subdirectories. 
+After compiling, in Windows, double click on the executable file for each backend service from their subdirectories. 
 
     balance_service.exe
     deposit_service.exe
@@ -271,7 +368,7 @@ This is also a script that allows you to shutdown all backend services easily.
 
 ## Unit tests
 
-The unit tests were not written to achieve 100% code coverage. They were written to test that the core functionality of each backend module works. 
+The unit tests were not written to achieve 100% code coverage. They were written to test that the core functionality of each backend module works, especially when there is fiddly logic involved. Unit tests are only written where it makes sense to.
 
 The unit tests rely on having an actual instance of both Redis and PostgreSQL to work. You need to ensure that they are set up correctly as described below. Some developers might prefer using mock libraries for unit testing code that connects to an external resource (databases, etc.). However, I prefer to set up the actual resources for testing. Setting up actual resoures for unit testing gives you more authentic feedback on what would happen in production.
 
