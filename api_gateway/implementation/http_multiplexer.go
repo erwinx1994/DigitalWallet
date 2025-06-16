@@ -17,6 +17,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// Used for unit testing only
 type http_request_multiplexer struct {
 	config    *config.Config
 	context   context.Context
@@ -86,6 +87,7 @@ func (mux *http_request_multiplexer) send_request_and_return_response(
 	for time_elapsed < response_timeout && !exists {
 		time.Sleep(200 * time.Millisecond)
 		time_elapsed += 200
+		result, exists = responses_cache.LoadAndDelete(message_id)
 	}
 
 	// Send response to user
@@ -282,15 +284,29 @@ func (mux *http_request_multiplexer) POST_Test(input *paths.MatchResult, writer 
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	body := messages.POST_Deposit{}
+	body := messages.GET_Balance{}
 	err = json.Unmarshal(bytes, &body)
 	if err != nil {
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	// Send response to user
-	writer.Write(bytes)
+	// Prepare redis message
+	body.Header.MessageID = mux.global_id.Add(1)
+	body.Header.Action = messages.Action_get_balance
+	bytes, err = json.Marshal(body)
+	if err != nil {
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	mux.send_request_and_return_response(
+		body.Header.MessageID,
+		bytes,
+		&mux.config.BalanceService,
+		mux.balance_requests_queue,
+		&mux.balance_responses_cache,
+		writer)
 }
 
 func (mux *http_request_multiplexer) GET_WalletBalance(input *paths.MatchResult, writer http.ResponseWriter, request *http.Request) {
@@ -392,19 +408,26 @@ func (mux *http_request_multiplexer) GET_Test(input *paths.MatchResult, writer h
 	log.Println("Path: ", request.URL.Path)
 	log.Println("Header: ", request.Header)
 
-	// Send test response to user
-	type TestResponse struct {
-		Message string `json:",omitempty"`
+	// Prepare test GET request
+	request_message := messages.GET_Balance{
+		Header: messages.Header{
+			MessageID: mux.global_id.Add(1),
+			Action:    messages.Action_get_balance,
+		},
 	}
-	test_response := TestResponse{
-		Message: "Hi. This is a test response.",
-	}
-	bytes, err := json.Marshal(test_response)
+	bytes, err := json.Marshal(request_message)
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	writer.Write([]byte(bytes))
+
+	mux.send_request_and_return_response(
+		request_message.Header.MessageID,
+		bytes,
+		&mux.config.BalanceService,
+		mux.balance_requests_queue,
+		&mux.balance_responses_cache,
+		writer)
 }
 
 func (mux *http_request_multiplexer) ProcessGETRequests(writer http.ResponseWriter, request *http.Request) {

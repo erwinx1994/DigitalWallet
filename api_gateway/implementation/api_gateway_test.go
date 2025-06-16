@@ -19,6 +19,13 @@ func Test_APIGateway(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	config.BalanceService.RequestsQueue.QueueName = "api_gateway_requests_queue_test"
+	config.BalanceService.ResponsesQueue.QueueName = "api_gateway_responses_queue_test"
+
+	// Start running test service
+	test_service_ := create_test_service(&config.BalanceService)
+	test_service_.run()
+	defer test_service_.shutdown()
 
 	// Start running API gateway
 	api_gateway, err := CreateAPIGateway(config)
@@ -56,16 +63,15 @@ func Test_APIGateway(t *testing.T) {
 
 		expected_data := []byte("{\"Message\":\"Hi. This is a test response.\"}")
 		if !reflect.DeepEqual(bytes, expected_data) {
-			t.Fatal("Expected: ", string(expected_data), ", Got: ", string(bytes))
+			t.Error("Expected: ", string(expected_data), ", Got: ", string(bytes))
 		}
 	}
 
 	// Test HTTP POST request
 	{
 		// Prepare body of HTTP POST message
-		body := messages.POST_Deposit{
-			Amount:   "100.20",
-			Currency: "SGD",
+		body := messages.GET_Balance{
+			WalletID: "This is test message 2.",
 		}
 		data, err := json.Marshal(body)
 		if err != nil {
