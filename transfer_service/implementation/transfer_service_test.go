@@ -81,6 +81,18 @@ func Test_TransferService(t *testing.T) {
 		t.Fatal("Could not connect to PostgreSQL database.", err)
 	}
 
+	// Ensure balances and transactions table are empty when this unit test is finished
+	defer func() {
+		_, err = db.Exec("delete from " + config.WalletDatabase.BalanceTable)
+		if err != nil {
+			log.Fatal(err)
+		}
+		_, err = db.Exec("delete from " + config.WalletDatabase.TransactionsTable)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
 	// Create source wallet
 	{
 		transaction_date_time := time.Now().UTC()
@@ -108,18 +120,6 @@ func Test_TransferService(t *testing.T) {
 			t.Fatal("Error updating database.", err)
 		}
 	}
-
-	// Ensure balances and transactions table are empty when this unit test is finished
-	defer func() {
-		_, err = db.Exec("delete from " + config.WalletDatabase.BalanceTable)
-		if err != nil {
-			log.Fatal(err)
-		}
-		_, err = db.Exec("delete from " + config.WalletDatabase.TransactionsTable)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}()
 
 	// Transfer some money from source to destination wallets
 	{

@@ -346,3 +346,8 @@ Since each subdirectory of this project hosts a different application, you need 
     # From root directory of this project
     cd ./withdraw_service
     go test ./...
+
+There is also a helper script in the root directory of this repository that allows you to run all the unit tests in one command.
+
+    run_unit_tests.bat
+

@@ -77,6 +77,18 @@ func Test_TransactionHistoryService(t *testing.T) {
 		t.Fatal("Could not connect to PostgreSQL database.", err)
 	}
 
+	// Ensure balances and transactions table are empty when this unit test is finished
+	defer func() {
+		_, err = db.Exec("delete from " + config.WalletDatabase.BalanceTable)
+		if err != nil {
+			log.Fatal(err)
+		}
+		_, err = db.Exec("delete from " + config.WalletDatabase.TransactionsTable)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
 	// Create a new wallet with some transactions
 	{
 		_, err = db.Exec("insert into "+config.WalletDatabase.BalanceTable+" (wallet_id, currency, balance) values ($1, $2, $3)", wallet_id, currency, initial_amount)
@@ -95,17 +107,7 @@ func Test_TransactionHistoryService(t *testing.T) {
 		}
 	}
 
-	// Ensure balances and transactions table are empty when this unit test is finished
-	defer func() {
-		_, err = db.Exec("delete from " + config.WalletDatabase.BalanceTable)
-		if err != nil {
-			log.Fatal(err)
-		}
-		_, err = db.Exec("delete from " + config.WalletDatabase.TransactionsTable)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}()
+	time.Sleep(1 * time.Second)
 
 	// Get transaction history
 	{

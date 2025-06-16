@@ -76,19 +76,23 @@ func Test_BalanceService(t *testing.T) {
 		t.Fatal("Could not connect to PostgreSQL database.", err)
 	}
 
+	// Ensure balances and transactions table are empty when this unit test is finished
+	defer func() {
+		_, err = db.Exec("delete from " + config.WalletDatabase.BalanceTable)
+		if err != nil {
+			log.Fatal(err)
+		}
+		_, err = db.Exec("delete from " + config.WalletDatabase.TransactionsTable)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
+
 	// Add test row to balances table
 	_, err = db.Exec("insert into "+config.WalletDatabase.BalanceTable+" (wallet_id, currency, balance) values ($1,$2,$3)", wallet_id, currency, balance)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Ensure test row gets deleted when unit test is finished
-	defer func() {
-		_, err = db.Exec("delete from "+config.WalletDatabase.BalanceTable+" where wallet_id=$1", wallet_id)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}()
 
 	// Put message into requests queue
 	request_message := messages.GET_Balance{

@@ -181,11 +181,18 @@ func (service *TransactionHistoryService) async_run() {
 		}
 
 		// Query PostgreSQL database
+		db_transaction, err := db.Begin()
+		if err != nil {
+			service.send_failed_response("Database error", &request_message)
+			continue
+		}
 
 		// Check if wallet already exist, return an error if it does not
 		var balance int64 = 0
-		err = get_balance.QueryRow(request_message.WalletID).Scan(&balance)
+		tx_get_balance := db_transaction.Stmt(get_balance)
+		err = tx_get_balance.QueryRow(request_message.WalletID).Scan(&balance)
 		if err != nil {
+			db_transaction.Rollback()
 			if errors.Is(err, sql.ErrNoRows) {
 				service.send_failed_response("Cannot get transaction history of non-existent wallet", &request_message)
 			} else {
@@ -200,6 +207,7 @@ func (service *TransactionHistoryService) async_run() {
 		if len(request_message.From) > 0 {
 			from, err = time.Parse(time_format, request_message.From)
 			if err != nil {
+				db_transaction.Rollback()
 				service.send_failed_response("Invalid start date", &request_message)
 				continue
 			}
@@ -207,6 +215,7 @@ func (service *TransactionHistoryService) async_run() {
 		if len(request_message.To) > 0 {
 			to, err = time.Parse(time_format, request_message.To)
 			if err != nil {
+				db_transaction.Rollback()
 				service.send_failed_response("Invalid end date", &request_message)
 				continue
 			}
@@ -214,8 +223,10 @@ func (service *TransactionHistoryService) async_run() {
 		}
 
 		// Get transaction history of wallet
-		rows, err := get_transaction_history.Query(request_message.WalletID, from, to)
+		tx_get_transaction_history := db_transaction.Stmt(get_transaction_history)
+		rows, err := tx_get_transaction_history.Query(request_message.WalletID, from, to)
 		if err != nil {
+			db_transaction.Rollback()
 			service.send_failed_response("Database error", &request_message)
 			continue
 		}
@@ -253,10 +264,12 @@ func (service *TransactionHistoryService) async_run() {
 		err = rows.Err()
 		if err != nil {
 			rows.Close()
+			db_transaction.Rollback()
 			service.send_failed_response("Database error", &request_message)
 			continue
 		}
 		rows.Close()
+		db_transaction.Commit()
 
 		// Prepare response
 		response_message := responses.TransactionHistory{
