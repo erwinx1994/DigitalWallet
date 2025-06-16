@@ -448,7 +448,8 @@ func (api_client *APIClient) get_transaction_history() {
 			fmt.Println("No transactions found")
 		} else {
 			fmt.Println("Transaction history")
-			fmt.Println("Date(YYYYMMDD) Type(D/W) Currency Amount")
+			fmt.Println("Date is in YYYYMMDD format.")
+			fmt.Println("Date Type Currency Amount")
 			for _, row := range response_body.History {
 				fmt.Println(row.Date, get_transaction_type(row.Type), row.Currency, row.Amount)
 			}
