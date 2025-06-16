@@ -22,12 +22,13 @@ type RedisMessageQueue struct {
 	Username  string `yaml:"username"`
 	Password  string `yaml:"password"`
 	QueueName string `yaml:"queue_name"`
-	Timeout   int    `yaml:"timeout"`
+	Timeout   int    `yaml:"timeout"` // s
 }
 
 type Service struct {
-	RequestsQueue  RedisMessageQueue `yaml:"redis_requests_queue"`
-	ResponsesQueue RedisMessageQueue `yaml:"redis_responses_queue"`
+	RequestsQueue    RedisMessageQueue `yaml:"redis_requests_queue"`
+	ResponsesQueue   RedisMessageQueue `yaml:"redis_responses_queue"`
+	CacheWaitTimeout int               `yaml:"cache_wait_timeout"` // s
 }
 
 type Config struct {

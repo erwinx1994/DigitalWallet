@@ -39,6 +39,7 @@ func Test_LoadConfig(t *testing.T) {
 				QueueName: "deposit_responses_queue",
 				Timeout:   5,
 			},
+			CacheWaitTimeout: 10,
 		},
 		WithdrawalService: Service{
 			RequestsQueue: RedisMessageQueue{
@@ -57,6 +58,7 @@ func Test_LoadConfig(t *testing.T) {
 				QueueName: "withdrawal_responses_queue",
 				Timeout:   5,
 			},
+			CacheWaitTimeout: 10,
 		},
 		TransferService: Service{
 			RequestsQueue: RedisMessageQueue{
@@ -75,6 +77,7 @@ func Test_LoadConfig(t *testing.T) {
 				QueueName: "transfer_responses_queue",
 				Timeout:   5,
 			},
+			CacheWaitTimeout: 10,
 		},
 		BalanceService: Service{
 			RequestsQueue: RedisMessageQueue{
@@ -93,6 +96,7 @@ func Test_LoadConfig(t *testing.T) {
 				QueueName: "balance_responses_queue",
 				Timeout:   5,
 			},
+			CacheWaitTimeout: 10,
 		},
 		TransactionHistoryService: Service{
 			RequestsQueue: RedisMessageQueue{
@@ -111,6 +115,7 @@ func Test_LoadConfig(t *testing.T) {
 				QueueName: "transaction_history_responses_queue",
 				Timeout:   5,
 			},
+			CacheWaitTimeout: 10,
 		},
 	}
 	if !reflect.DeepEqual(*config, expected_config) {

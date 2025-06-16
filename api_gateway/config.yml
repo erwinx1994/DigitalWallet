@@ -21,6 +21,7 @@ deposits_service:
     password:                       ""
     queue_name:                     "deposit_responses_queue"
     timeout:                        5 # s
+  cache_wait_timeout:               10 # s
 
 withdrawal_service:
   redis_requests_queue:
@@ -37,6 +38,7 @@ withdrawal_service:
     password:                       ""
     queue_name:                     "withdrawal_responses_queue"
     timeout:                        5 # s
+  cache_wait_timeout:               10 # s
 
 transfer_service:
   redis_requests_queue:
@@ -53,6 +55,7 @@ transfer_service:
     password:                       ""
     queue_name:                     "transfer_responses_queue"
     timeout:                        5 # s
+  cache_wait_timeout:               10 # s
 
 balance_service:
   redis_requests_queue:
@@ -69,6 +72,7 @@ balance_service:
     password:                       ""
     queue_name:                     "balance_responses_queue"
     timeout:                        5 # s
+  cache_wait_timeout:               10 # s
 
 transaction_history_service:
   redis_requests_queue:
@@ -85,4 +89,5 @@ transaction_history_service:
     password:                       ""
     queue_name:                     "transaction_history_responses_queue"
     timeout:                        5 # s
+  cache_wait_timeout:               10 # s
 

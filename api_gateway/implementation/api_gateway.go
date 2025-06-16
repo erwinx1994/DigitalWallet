@@ -183,52 +183,57 @@ func (api_gateway *APIGateway) async_read_responses(
 		case service_balance:
 
 			response_message := responses.Balance{}
-			err := json.Unmarshal([]byte(string_slice[1]), &response_message)
+			bytes := []byte(string_slice[1])
+			err := json.Unmarshal(bytes, &response_message)
 			if err != nil {
 				log.Println("Error deserialising JSON message. Must not happen in production.")
 				continue
 			}
-			response_cache.Store(response_message.Header.MessageID, response_message)
+			response_cache.Store(response_message.Header.MessageID, bytes)
 
 		case service_deposit:
 
 			response_message := responses.Deposit{}
-			err := json.Unmarshal([]byte(string_slice[1]), &response_message)
+			bytes := []byte(string_slice[1])
+			err := json.Unmarshal(bytes, &response_message)
 			if err != nil {
 				log.Println("Error deserialising JSON message. Must not happen in production.")
 				continue
 			}
-			response_cache.Store(response_message.Header.MessageID, response_message)
+			response_cache.Store(response_message.Header.MessageID, bytes)
 
 		case service_transaction_history:
 
 			response_message := responses.TransactionHistory{}
-			err := json.Unmarshal([]byte(string_slice[1]), &response_message)
+			bytes := []byte(string_slice[1])
+			err := json.Unmarshal(bytes, &response_message)
 			if err != nil {
 				log.Println("Error deserialising JSON message. Must not happen in production.")
 				continue
 			}
-			response_cache.Store(response_message.Header.MessageID, response_message)
+			response_cache.Store(response_message.Header.MessageID, bytes)
 
 		case service_transfer:
 
 			response_message := responses.Transfer{}
-			err := json.Unmarshal([]byte(string_slice[1]), &response_message)
+			bytes := []byte(string_slice[1])
+			err := json.Unmarshal(bytes, &response_message)
 			if err != nil {
 				log.Println("Error deserialising JSON message. Must not happen in production.")
 				continue
 			}
-			response_cache.Store(response_message.Header.MessageID, response_message)
+			response_cache.Store(response_message.Header.MessageID, bytes)
 
 		case service_withdraw:
 
 			response_message := responses.Withdraw{}
-			err := json.Unmarshal([]byte(string_slice[1]), &response_message)
+			bytes := []byte(string_slice[1])
+			err := json.Unmarshal(bytes, &response_message)
 			if err != nil {
 				log.Println("Error deserialising JSON message. Must not happen in production.")
 				continue
 			}
-			response_cache.Store(response_message.Header.MessageID, response_message)
+			response_cache.Store(response_message.Header.MessageID, bytes)
 		}
 	}
 }
