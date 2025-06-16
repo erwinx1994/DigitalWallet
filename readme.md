@@ -200,7 +200,13 @@ The names of all message queues used by the backend applications are summarised 
 
 The go compiler is required to compile the programs in this repository it can be downloaded from [https://go.dev/dl/](https://go.dev/dl/). 
 
-The following commands can be used to update the dependent libraries and compile each program.
+Since each subdirectory hosts a different Go application, you will need to change into the directory of each application to compile the code.
+
+    api_client
+    cd ./api_client
+    go get all
+    go mod tidy
+    go build
 
     api_gateway
     cd ./api_gateway
@@ -238,7 +244,26 @@ The following commands can be used to update the dependent libraries and compile
     go mod tidy
     go build
 
+Alternatively, you can also use this script in the root directory of the project to automatically compile all applications.
+
+    build_all.bat
+
 ## Running the program
+
+You should not need to change anything in the configuration file (**config.yml**) file for each backend service if you have set up the Redis and PostgreSQL databases correctly.
+
+After compiling, in Windows, double on the executable file for each backend service from their subdirectories. 
+
+    balance_service.exe
+    deposit_service.exe
+    transaction_history_service.exe
+    transfer_service.exe
+    withdraw_service.exe
+    api_gateway.exe
+
+Alternatively, you can also use this script in the root directory of the project to automatically start up all applications after compiling.
+
+    start_backend_services.bat
 
 ## Unit tests
 
