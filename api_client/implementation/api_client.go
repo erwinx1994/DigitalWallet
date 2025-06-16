@@ -3,7 +3,9 @@ package implementation
 import (
 	"api_client/config"
 	"fmt"
+	"net/http"
 	"os"
+	"time"
 )
 
 type APIClient struct {
@@ -69,16 +71,43 @@ func (api_client *APIClient) get_wallet_balance() {
 
 	// Verify that inputs are correct
 	if len(os.Args) != number_of_arguments_get_balance {
-		fmt.Println("Incorrect number of arguments for get_balance command.")
+		fmt.Println("Incorrect number of arguments for get_balance command. Please review the help menu for assistance. It can be accessed just by entering api_client.")
+		return
+	}
+	if len(os.Args[2]) == 0 {
+		fmt.Println("Please enter a wallet ID.")
+		fmt.Println()
+		fmt.Println("api_client get_balance <wallet_id>")
 		return
 	}
 
-	// Send request to server
+	// api_client get_balance <wallet_id>
+	// GET /wallets/{wallet_id}/balance
 
-	// Wait for response from server
+	// Prepare GET request
+	http_client := http.Client{
+		Timeout: time.Duration(api_client.config.RequestTimeout) * time.Second,
+	}
+	wallet_id := os.Args[2]
+	base_url := api_client.config.Server.GetURL()
+	full_url := base_url + "/wallets/{" + wallet_id + "}/balance"
+	response, err := http_client.Get(full_url)
+	if err != nil {
+		fmt.Println("HTTP error occurred: ", err.Error())
+		return
+	}
+
+	// Parse result
+	bytes := make([]byte, response.ContentLength)
+	_, err = response.Body.Read(bytes)
+	if err != nil {
+		fmt.Println("Error reading response: ", err.Error())
+		return
+	}
 
 	// Print result to console
-
+	fmt.Println("HTTP GET response status: ", response.Status)
+	fmt.Println(string(bytes))
 }
 
 func (api_client *APIClient) get_transaction_history() {
@@ -111,6 +140,8 @@ func (api_client *APIClient) Run() {
 	case action_get_transaction_history:
 		api_client.get_transaction_history()
 	default:
-		fmt.Println("Invalid action.")
+		fmt.Println("Invalid command. Please review the help menu for assistance. It can be accessed by entering this command without any arguments.")
+		fmt.Println()
+		fmt.Println("api_client")
 	}
 }

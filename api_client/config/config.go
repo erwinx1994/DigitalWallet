@@ -7,8 +7,9 @@ import (
 )
 
 type Server struct {
-	URL  string `yaml:"url"`
-	Port string `yaml:"port"`
+	Protocol string `yaml:"protocol"`
+	URL      string `yaml:"url"`
+	Port     string `yaml:"port"`
 }
 
 type Config struct {
@@ -31,4 +32,14 @@ func Load(filepath string) (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+func (server *Server) GetURL() string {
+	var url string = ""
+	if len(server.Port) > 0 {
+		url = server.Protocol + "://" + server.URL + ":" + server.Port
+	} else {
+		url = server.Protocol + "://" + server.URL
+	}
+	return url
 }

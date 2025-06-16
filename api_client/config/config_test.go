@@ -15,8 +15,9 @@ func Test_LoadConfig(t *testing.T) {
 
 	expected_config := Config{
 		Server: Server{
-			URL:  "localhost",
-			Port: "1120",
+			Protocol: "http",
+			URL:      "localhost",
+			Port:     "1120",
 		},
 		RequestTimeout: 10, // s
 	}

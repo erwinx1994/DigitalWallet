@@ -1,4 +1,5 @@
 server:
+  protocol:               http
   url:                    localhost
   port:                   1120
 request_timeout:          10          # s

@@ -1,0 +1,6 @@
+start /min "Balance service" /D "./balance_service" "balance_service.exe"
+start /min "Deposit service" /D "./deposit_service" "deposit_service.exe"
+start /min "Transaction history service" /D "./transaction_history_service" "transaction_history_service.exe"
+start /min "Transfer service" /D "./transfer_service" "transfer_service.exe"
+start /min "Withdraw service" /D "./withdraw_service" "withdraw_service.exe"
+start /min "API Gateway" /D "./api_gateway" "api_gateway.exe"
