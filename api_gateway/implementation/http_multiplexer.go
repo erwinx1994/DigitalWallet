@@ -358,8 +358,16 @@ func (mux *http_request_multiplexer) GET_TransactionHistory(input *paths.MatchRe
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	from := input.KeyValuePairs["from"]
-	to := input.KeyValuePairs["to"]
+	from_slice := request.URL.Query()["from"]
+	from := ""
+	if len(from_slice) > 0 {
+		from = from_slice[0]
+	}
+	to_slice := request.URL.Query()["to"]
+	to := ""
+	if len(to_slice) > 0 {
+		to = to_slice[0]
+	}
 
 	// Prepare redis message
 	request_message := messages.GET_TransactionHistory{

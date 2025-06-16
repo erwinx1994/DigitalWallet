@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func ConvertToString(status int) string {
+func convert_to_string(status int) string {
 	result := ""
 	switch status {
 	case responses.Status_unknown:
@@ -23,6 +23,16 @@ func ConvertToString(status int) string {
 		result = "Successful"
 	case responses.Status_failed:
 		result = "Failed"
+	}
+	return result
+}
+
+func get_transaction_type(input string) string {
+	result := ""
+	if input == "D" {
+		result = "Deposit"
+	} else if input == "W" {
+		result = "Withdrawal"
 	}
 	return result
 }
@@ -112,7 +122,7 @@ func (api_client *APIClient) post_deposit() {
 	}
 
 	// Print result to console
-	fmt.Println("Request status: ", ConvertToString(response_body.Status))
+	fmt.Println("Request status: ", convert_to_string(response_body.Status))
 	switch response_body.Status {
 	case responses.Status_successful:
 		fmt.Println("New balance: ", response_body.Currency, " ", response_body.NewBalance)
@@ -201,7 +211,7 @@ func (api_client *APIClient) get_wallet_balance() {
 	}
 
 	// Print result to console
-	fmt.Println("Request status: ", ConvertToString(response_body.Status))
+	fmt.Println("Request status: ", convert_to_string(response_body.Status))
 	switch response_body.Status {
 	case responses.Status_successful:
 		fmt.Println("Balance: ", response_body.Currency, " ", response_body.Balance)
@@ -285,16 +295,16 @@ func (api_client *APIClient) get_transaction_history() {
 	}
 
 	// Print result to console
-	fmt.Println("Request status: ", ConvertToString(response_body.Status))
+	fmt.Println("Request status: ", convert_to_string(response_body.Status))
 	switch response_body.Status {
 	case responses.Status_successful:
 		if len(response_body.History) == 0 {
 			fmt.Println("No transactions found")
 		} else {
 			fmt.Println("Transaction history")
-			fmt.Println("Date (YYYYMMDD), Type (D/W), Currency, Amount")
+			fmt.Println("Date(YYYYMMDD) Type(D/W) Currency Amount")
 			for _, row := range response_body.History {
-				fmt.Println(row.Date, ", ", row.Type, ", ", row.Currency, ", ", row.Amount)
+				fmt.Println(row.Date, get_transaction_type(row.Type), row.Currency, row.Amount)
 			}
 		}
 	case responses.Status_failed:

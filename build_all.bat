@@ -32,3 +32,5 @@ cd ../transaction_history_service
 go get all
 go mod tidy
 go build
+
+cd ..
