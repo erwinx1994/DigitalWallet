@@ -20,7 +20,7 @@ type Header struct {
 type Deposit struct {
 	Header       Header `json:"header"`
 	Status       int    `json:"status,omitempty"`
-	ErrorMessage string `json:"error_message,omit_empty"`
+	ErrorMessage string `json:"error_message,omitempty"`
 	Currency     string `json:"currency,omitempty"`
 	NewBalance   string `json:"new_balance,omitempty"`
 }
@@ -28,7 +28,7 @@ type Deposit struct {
 type Withdraw struct {
 	Header       Header `json:"header"`
 	Status       int    `json:"status,omitempty"`
-	ErrorMessage string `json:"error_message,omit_empty"`
+	ErrorMessage string `json:"error_message,omitempty"`
 	Currency     string `json:"currency,omitempty"`
 	NewBalance   string `json:"new_balance,omitempty"`
 }
@@ -36,7 +36,7 @@ type Withdraw struct {
 type Transfer struct {
 	Header       Header `json:"header"`
 	Status       int    `json:"status,omitempty"`
-	ErrorMessage string `json:"error_message,omit_empty"`
+	ErrorMessage string `json:"error_message,omitempty"`
 	Currency     string `json:"currency,omitempty"`
 	NewBalance   string `json:"new_balance,omitempty"`
 }
@@ -44,7 +44,7 @@ type Transfer struct {
 type Balance struct {
 	Header       Header `json:"header"`
 	Status       int    `json:"status,omitempty"`
-	ErrorMessage string `json:"error_message,omit_empty"`
+	ErrorMessage string `json:"error_message,omitempty"`
 	Currency     string `json:"currency,omitempty"`
 	Balance      string `json:"balance,omitempty"`
 }

@@ -272,6 +272,9 @@ The unit tests will automatically create and delete these additional queues in R
     transaction_history_requests_queue_test
     transaction_history_responses_queue_test
 
+    api_gateway_requests_queue_test
+    api_gateway_responses_queue_test
+
 ### Test PostgreSQL instance
 
 Make sure PostgreSQL is started up and available for connection with the following settings.
