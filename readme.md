@@ -21,7 +21,7 @@ This repository provides multiple applications that work together to function as
     transaction_history_service
     Retrieve transaction history of wallet
 
-The system design diagram that connects them all can be found in the [./system_design/Simplified digital wallet system.pdf](./system_design/Simplified%20digital%20wallet%20system.pdf) file in this repository.
+The system design diagram that connects them all can be found in the [./docs/Simplified digital wallet system.pdf](./docs/Simplified%20digital%20wallet%20system.pdf) file in this repository.
 
 ## Client application
 
@@ -240,14 +240,22 @@ The following commands can be used to update the dependent libraries and compile
 
 ## Running the program
 
-
-## Running unit tests
+## Unit tests
 
 The unit tests were not written to achieve 100% code coverage. They were written to test that the core functionality of each backend module works. 
 
-The unit tests rely on having an actual instance of both Redis and PostgreSQL to work. You need to ensure that they are set up correctly as described below.
+The unit tests rely on having an actual instance of both Redis and PostgreSQL to work. You need to ensure that they are set up correctly as described below. Some developers might prefer using mock libraries for unit testing code that connects to an external resource (databases, etc.). However, I prefer to set up the actual resources for testing. Setting up actual resoures for unit testing gives you more authentic feedback on what would happen in production.
 
-Additional Redis message queues used for unit testing are described below.
+### Test Redis instance
+
+Make sure Redis is started up and available for connection with the following settings.
+
+    Host:                           localhost
+    Port:                           1640
+    Username:                       default
+    Password:                       
+
+The unit tests will automatically create and delete these additional queues in Redis. No further action needs to be done.
 
     deposit_requests_queue_test
     deposit_responses_queue_test
@@ -264,50 +272,77 @@ Additional Redis message queues used for unit testing are described below.
     transaction_history_requests_queue_test
     transaction_history_responses_queue_test
 
-Additional tables need to be created in the PostgreSQL database for unit testing. They are created under the **test_wallet** schema.
+### Test PostgreSQL instance
 
+Make sure PostgreSQL is started up and available for connection with the following settings.
+
+    Host:                           localhost
+    Port:                           5432
+    Username:                       postgres
+    Password:                       postgres
+    Database:                       postgres
+
+You need to create additional **balances** and **transactions** tables in schemas used for testing.
+
+    -- Create resources for testing the balance service.
     create schema test_balance_service;
     create table postgres.test_balance_service.balances(wallet_id text, currency character(3), balance bigint);
     create table postgres.test_balance_service.transactions(wallet_id text, date_and_time timestamptz, currency character(3), amount bigint);
 
+    -- Create resources for testing the deposit service
     create schema test_deposit_service;
     create table postgres.test_deposit_service.balances(wallet_id text, currency character(3), balance bigint);
     create table postgres.test_deposit_service.transactions(wallet_id text, date_and_time timestamptz, currency character(3), amount bigint);
 
+    -- Create resources for testing the transaction history service
     create schema test_transaction_history_service;
     create table postgres.test_transaction_history_service.balances(wallet_id text, currency character(3), balance bigint);
     create table postgres.test_transaction_history_service.transactions(wallet_id text, date_and_time timestamptz, currency character(3), amount bigint);
 
+    -- Create resources for testing the transfer service
     create schema test_transfer_service;
     create table postgres.test_transfer_service.balances(wallet_id text, currency character(3), balance bigint);
     create table postgres.test_transfer_service.transactions(wallet_id text, date_and_time timestamptz, currency character(3), amount bigint);
 
+    -- Create resources for testing the withdraw service
     create schema test_withdraw_service;
     create table postgres.test_withdraw_service.balances(wallet_id text, currency character(3), balance bigint);
     create table postgres.test_withdraw_service.transactions(wallet_id text, date_and_time timestamptz, currency character(3), amount bigint);
 
-The following commands can be used to run the unit tests for each package.
+### Run the unit tests
 
+Since each subdirectory of this project hosts a different application, you need to change into that subdirectory before running the unit tests for that application. This can be done like shown below.
+
+    # This is a comment
+
+    # From root directory of this project
     cd ./api_client
     go test ./...
 
+    # From root directory of this project
     cd ./api_gateway
     go test ./...
 
+    # From root directory of this project
     cd ./balance_service
     go test ./...
 
+    # From root directory of this project
     cd ./deposit_service
     go test ./...
 
+    # From root directory of this project
     cd ./shared
     go test ./...
 
+    # From root directory of this project
     cd ./transaction_history_service
     go test ./...
 
+    # From root directory of this project
     cd ./transfer_service
     go test ./...
 
+    # From root directory of this project
     cd ./withdraw_service
     go test ./...
