@@ -61,7 +61,7 @@ func Test_APIGateway(t *testing.T) {
 		}
 		response.Body.Close()
 
-		expected_data := []byte("{\"Message\":\"Hi. This is a test response.\"}")
+		expected_data := []byte("{\"header\":{\"id\":1,\"action\":4},\"status\":1,\"error_message\":\"Test service: I received your message: \"}")
 		if !reflect.DeepEqual(bytes, expected_data) {
 			t.Error("Expected: ", string(expected_data), ", Got: ", string(bytes))
 		}
@@ -94,7 +94,7 @@ func Test_APIGateway(t *testing.T) {
 		}
 		response.Body.Close()
 
-		expected_data := []byte("{\"header\":{\"id\":0,\"action\":0},\"amount\":\"100.20\",\"currency\":\"SGD\"}")
+		expected_data := []byte("{\"header\":{\"id\":2,\"action\":4},\"status\":1,\"error_message\":\"Test service: I received your message: This is test message 2.\"}")
 		if !reflect.DeepEqual(bytes, expected_data) {
 			t.Fatal("Expected: ", string(expected_data), ", Got: ", string(bytes))
 		}
