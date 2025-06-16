@@ -448,10 +448,10 @@ func (api_client *APIClient) get_transaction_history() {
 			fmt.Println("No transactions found")
 		} else {
 			fmt.Println("Transaction history")
-			fmt.Println("Date is in YYYYMMDD format.")
-			fmt.Println("Date Type Currency Amount")
+			fmt.Println()
+			fmt.Println("Date(YYYYMMDD) \t Type \t\t Currency \t Amount")
 			for _, row := range response_body.History {
-				fmt.Println(row.Date, get_transaction_type(row.Type), row.Currency, row.Amount)
+				fmt.Println(row.Date, "\t", get_transaction_type(row.Type), "\t", row.Currency, "\t\t", row.Amount)
 			}
 		}
 	case responses.Status_failed:
