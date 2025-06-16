@@ -182,6 +182,12 @@ func (service *TransferService) async_run() {
 			continue
 		}
 
+		// Verify that inputs are correct
+		if len(request_message.Currency) != 3 {
+			service.send_failed_response("Invalid currency", &request_message)
+			continue
+		}
+
 		// Query PostgreSQL database
 		transaction_date_time := time.Now().UTC()
 		db_transaction, err := db.Begin()

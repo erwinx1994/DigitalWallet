@@ -134,17 +134,86 @@ func (api_client *APIClient) post_deposit() {
 
 func (api_client *APIClient) post_withdrawal() {
 
+	/*
+		api_client withdraw <wallet_id> <currency> <amount>
+		POST /wallets/{wallet_id}/withdrawals
+		{
+		    "amount": 5000,
+		    "currency": "XXX"
+		}
+	*/
+
 	// Verify that inputs are correct
 	if len(os.Args) != number_of_arguments_withdraw {
-		fmt.Println("Incorrect number of arguments for withdraw command.")
+		fmt.Println("Incorrect number of arguments for withdraw command. Please review the help menu for assistance. It can be accessed just by entering api_client.")
+		return
+	}
+	if len(os.Args[2]) == 0 {
+		fmt.Println("Please enter a wallet ID.")
+		fmt.Println()
+		fmt.Println("api_client withdraw <wallet_id> <currency> <amount>")
+		return
+	}
+	if len(os.Args[3]) == 0 {
+		fmt.Println("Please enter currency to withdraw.")
+		fmt.Println()
+		fmt.Println("api_client withdraw <wallet_id> <currency> <amount>")
+		return
+	}
+	if len(os.Args[4]) == 0 {
+		fmt.Println("Please enter an amount to withdraw.")
+		fmt.Println()
+		fmt.Println("api_client withdraw <wallet_id> <currency> <amount>")
 		return
 	}
 
-	// Send request to server
+	// Make POST request
+	http_client := http.Client{
+		Timeout: time.Duration(api_client.config.RequestTimeout) * time.Second,
+	}
+	wallet_id := os.Args[2]
+	base_url := api_client.config.Server.GetURL()
+	full_url := base_url + "/wallets/{" + wallet_id + "}/withdrawals"
+	http_post_body := messages.POST_Withdraw{
+		Amount:   os.Args[4],
+		Currency: os.Args[3],
+	}
+	http_post_body_bytes, err := json.Marshal(http_post_body)
+	if err != nil {
+		fmt.Println("Unable to serialise body of request into JSON.")
+		return
+	}
+	response, err := http_client.Post(full_url, "application/json", bytes.NewReader(http_post_body_bytes))
+	if err != nil {
+		fmt.Println("HTTP error occurred: ", err.Error())
+		return
+	}
 
-	// Wait for response from server
+	// Parse result
+	response_bytes := make([]byte, response.ContentLength)
+	_, err = response.Body.Read(response_bytes)
+	if err != nil {
+		if !errors.Is(err, io.EOF) {
+			fmt.Println("Error reading response: ", err.Error())
+			return
+		}
+	}
+	response_body := responses.Withdraw{}
+	err = json.Unmarshal(response_bytes, &response_body)
+	if err != nil {
+		fmt.Println("Error parsing JSON response.")
+		return
+	}
 
 	// Print result to console
+	fmt.Println("Request status: ", convert_to_string(response_body.Status))
+	switch response_body.Status {
+	case responses.Status_successful:
+		fmt.Println("New balance: ", response_body.Currency, " ", response_body.NewBalance)
+	case responses.Status_failed:
+		fmt.Println("Error message: ", response_body.ErrorMessage)
+	case responses.Status_unknown:
+	}
 
 }
 
