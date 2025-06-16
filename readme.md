@@ -3,7 +3,7 @@
 This repository provides multiple applications that work together to function as a backend for a digital wallet service. The purpose of each application is described below.
 
     api_client
-    Front end application for depositing money, withdrawing money, transferring money, getting the balance of a wallet and retrieving the transaction history of a wallet.
+    Front end application for depositing money, withdrawing money, transferring money, getting the balance of a wallet and retrieving the transaction history of a wallet. It communicates with the API gateway.
 
     api_gateway
     Route incoming HTTP requests from the user to the correct backend service. 
@@ -118,33 +118,7 @@ The **transactions** table stores the wallet ID, date and time, currency and amo
     wallet_id_1, YYYYMMDD-HH:MM:SS, SGD, 10000
     wallet_id_1, YYYYMMDD-HH:MM:SS, SGD, -2000
 
-## Client application
-
-The client application can be found in the **api_client** subfolder of this repository. Once compiled, it can be used to interact with the backend applications to manage your wallet.
-
-
-
-This command allows you to deposit an amount of money in the specified wallet in the specified currency. This is also how an acccount is first created. 
-
-	api_client deposit <wallet_id> <currency> <amount>
-
-This command allows you to withdraw an amount of money from the specified wallet in the specified currency.
-
-	api_client withdraw <wallet_id> <currency> <amount>
-
-This command allows you to transfer an amount of money from source to destination wallets of the same currency.
-
-	api_client transfer <source_wallet_id> <destination_wallet_id> <currency> <amount>
-
-This command allows you to get the balance of the specified wallet.
-
-	api_client get_balance <wallet_id>
-
-This command allows you to get the transaction history of the specified wallet from a start date to end date, inclusive. The start and end dates are interpreted in UTC time at midnight 00:00:00.
-
-	api_client get_transaction_history <wallet_id> <start_date> <end_date>
-
-## Design of RESTful API
+### Design of RESTful API
 
     Deposit money into wallet
     POST /wallets/{wallet_id}/deposits
@@ -174,6 +148,34 @@ This command allows you to get the transaction history of the specified wallet f
 
     Retrieve transaction history of a wallet
     GET /wallets/{wallet_id}/transaction_history?from=YYYYMMDD&to=YYYYMMDD
+
+## Client application
+
+The client application can be found in the **api_client** subfolder of this repository. Once compiled, it can be used to interact with the backend applications to manage your wallet. You must follow all the steps described later in this document to set up your test environment to get it to work.
+
+This command allows you to deposit an amount of money in the specified wallet in the specified currency. This is also how an acccount is first created. You need to deposit at least 0.01 of any currency to create an account with us. The specified currency symbol must have exactly 3 characters.
+
+	api_client deposit <wallet_id> <currency> <amount>
+
+This command allows you to withdraw an amount of money from the specified wallet in the specified currency.
+
+	api_client withdraw <wallet_id> <currency> <amount>
+
+This command allows you to transfer an amount of money from source to destination wallets of the same currency.
+
+	api_client transfer <source_wallet_id> <destination_wallet_id> <currency> <amount>
+
+This command allows you to get the balance of the specified wallet.
+
+	api_client get_balance <wallet_id>
+
+This command allows you to get the transaction history of the specified wallet from a start date to end date, inclusive. The start and end dates are interpreted in UTC time at midnight 00:00:00.
+
+	api_client get_transaction_history <wallet_id> <start_date> <end_date>
+
+A demo of Digital Wallet in action is shown in this video here.
+
+    https://www.youtube.com/watch?v=H_BYeeOGn_I
 
 ## Set up of environment
 
@@ -224,15 +226,17 @@ The **Edit Environment Variable** window will show. Click on **New** then copy *
 
 Click **Ok** to save and close the remaining windows.
 
-PostgreSQL should automatically be started up after installation. It it isn't already started up, you can use the following command to do so.
+PostgreSQL should automatically be started up after installation. It it isn't already started up, you can use the following command to do so in the command prompt, if you have set your environment variables correctly.
 
     pg_ctl start -D "database_cluster_directory"
     pg_ctl start -D "C:\Program Files\PostgreSQL\17\data"
 
-Connect to the PostgreSQL database using the following command from the command prompt. There is already a default database automatically created during installation called **postgres**.
+Connect to the PostgreSQL database using the following command from the command prompt. It opens the command line interface for PostgreSQL. There is already a default database automatically created during installation called **postgres**.
 
     psql -U username -d database_name
     psql -U postgres -d postgres
+
+The steps after this are all performed from within the PSQL command line interface.
 
 Create a schema called **wallet** in the **postgres** database.
 
@@ -242,7 +246,7 @@ Create a new **balances** table in the **wallet** schema in the **postgres** dat
 
     create table postgres.wallet.balances(wallet_id text, currency character(3), balance bigint);
 
-Create a new **transactions** table in the **wallet** schema in the **postgres** database. The exact date and time of each transaction is clearly recorded with its time zone. This avoids confusing timezone conversions later on if the time zones were not specified. A deposit is recorded with a positive amount. A withdrawal is recorded as a negative amount. This allows the balance of a wallet to be easily recomputed using PostgreSQL's SUM() function later on.
+Create a new **transactions** table in the **wallet** schema in the **postgres** database. The exact date and time of each transaction is clearly recorded with its time zone. This avoids confusing timezone conversions later on if the time zones were not specified. As a rule of thumb, all transactions saved in UTC time zone. A deposit is recorded with a positive amount. A withdrawal is recorded as a negative amount. This allows the balance of a wallet to be easily recomputed using PostgreSQL's SUM() function later on. 
 
     create table postgres.wallet.transactions(wallet_id text, date_and_time timestamptz, currency character(3), amount bigint);
 
@@ -287,11 +291,6 @@ The names of all message queues used by the backend applications are summarised 
 
     transaction_history_requests_queue
     transaction_history_responses_queue
-
-## Library dependencies
-
-    go get github.com/redis/go-redis/v9
-    go get github.com/lib/pq
 
 ## How to compile the code
 
@@ -345,6 +344,18 @@ Alternatively, you can also use this script in the root directory of the project
 
     build_all.bat
 
+### Library dependencies
+
+The following are third party library dependencies used by the source code. Try retrieving them manually if you have problems compiling the applications.
+
+    go get github.com/redis/go-redis/v9
+    go get github.com/lib/pq
+    go get gopkg.in/yaml.v3
+
+Another thing to note is that the **shared** folder in this repository is actually a DIY library for code comonly reused among all the backend applications. It is referred to by adding the following line to the **go.mod** file of each project (deposit service, withdraw service, etc.).
+
+    replace shared => ../shared
+
 ## Running the program
 
 You should not need to change anything in the configuration file (**config.yml**) file for each backend service if you have set up the Redis and PostgreSQL databases correctly.
@@ -365,6 +376,10 @@ Alternatively, you can also use this script in the root directory of the project
 This is also a script that allows you to shutdown all backend services easily.
 
     shutdown_all.bat
+
+Finally, navigate to the **./api_client** subdirectory of this project in the command prompt and run the commands described previously to test the application. You can view the help menu by running **api_client.exe** or **api_client** without any other options.
+
+![](./images/api_client.png)
 
 ## Unit tests
 
