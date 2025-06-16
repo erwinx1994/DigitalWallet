@@ -194,6 +194,10 @@ func (service *DepositService) async_run() {
 			service.send_failed_response("Amount specified was invalid", &request_message)
 			continue
 		}
+		if len(request_message.Currency) != 3 {
+			service.send_failed_response("Invalid currency", &request_message)
+			continue
+		}
 
 		// Query PostgreSQL database
 		transaction_date_time := time.Now().UTC()
