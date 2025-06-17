@@ -171,7 +171,7 @@ This command allows you to get the balance of the specified wallet.
 
 	api_client get_balance <wallet_id>
 
-This command allows you to get the transaction history of the specified wallet from a start date to end date, inclusive. The start and end dates are interpreted in UTC time at midnight 00:00:00.
+This command allows you to get the transaction history of the specified wallet from a start date to end date, inclusive. The start and end dates are provided in YYYYMMDD.
 
 	api_client get_transaction_history <wallet_id> <start_date> <end_date>
 
