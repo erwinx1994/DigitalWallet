@@ -141,7 +141,7 @@ func (service *TransactionHistoryService) async_run() {
 	}
 	defer get_balance.Close()
 
-	get_transaction_history, err := db.Prepare("select date_and_time, currency, amount from " + service.config.WalletDatabase.TransactionsTable + " where wallet_id=$1 and date_and_time>=$2 and date_and_time<=$3 order by date_and_time desc")
+	get_transaction_history, err := db.Prepare("select date_and_time, currency, amount from " + service.config.WalletDatabase.TransactionsTable + " where wallet_id=$1 and date_and_time>=$2 and date_and_time<$3 order by date_and_time desc")
 	if err != nil {
 		log.Fatal("Unable to prepare SQL statement.")
 	}
